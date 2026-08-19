@@ -11,7 +11,7 @@ curl -I -sD - -o /dev/null https://example.com > examples/sample_headers.txt
 
 Export a HAR from your browser (DevTools > Network > Save all as HAR with content), then:
 ```bash
-wafpc analyze -i path/to/export.har --format har
+edgeprint analyze -i path/to/export.har --format har
 ```
 
 Provide JSON observations (example schema):
@@ -31,8 +31,8 @@ Provide JSON observations (example schema):
 
 Run the analyzer:
 ```bash
-wafpc analyze -i examples/sample_headers.txt --format raw
-wafpc analyze -i observation.json --format json --json
+edgeprint analyze -i examples/sample_headers.txt --format raw
+edgeprint analyze -i observation.json --format json --json
 ```
 
 Exit codes are described in the README.

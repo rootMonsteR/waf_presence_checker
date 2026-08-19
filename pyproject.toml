@@ -3,13 +3,13 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "waf-presence-checker-lite"
-version = "0.1.0"
-description = "Offline analyzer that estimates whether HTTP responses likely came from a site protected by a WAF/CDN/edge firewall. It does not send network traffic."
+name = "edgeprint"
+version = "0.2.0"
+description = "Offline, corpus-scale fingerprinting of WAF, CDN and edge protection from captured HTTP responses. Sends no network traffic."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-  {name = "WAF Presence Checker Contributors", email = "security@example.com"}
+  {name = "edgeprint contributors"}
 ]
 license = {text = "MIT"}
 keywords = ["waf", "firewall", "security", "headers", "forensics", "offline", "pentesting", "authorized-testing"]
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -46,17 +47,17 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/waf-presence-checker"
-Documentation = "https://github.com/yourusername/waf-presence-checker/blob/main/README.md"
-"Source Code" = "https://github.com/yourusername/waf-presence-checker"
-"Bug Tracker" = "https://github.com/yourusername/waf-presence-checker/issues"
+Homepage = "https://github.com/rootMonsteR/waf_presence_checker"
+Documentation = "https://github.com/rootMonsteR/waf_presence_checker/blob/main/README.md"
+"Source Code" = "https://github.com/rootMonsteR/waf_presence_checker"
+"Bug Tracker" = "https://github.com/rootMonsteR/waf_presence_checker/issues"
 
 [project.scripts]
-wafpc = "waf_presence_checker.cli:main"
+edgeprint = "edgeprint.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["waf_presence_checker*"]
+include = ["edgeprint*"]
 exclude = ["tests*", "docs*", "examples*"]
 
 [tool.pytest.ini_options]
@@ -65,7 +66,7 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = [
     "--verbose",
-    "--cov=waf_presence_checker",
+    "--cov=edgeprint",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml"
@@ -86,7 +87,7 @@ strict_equality = true
 
 [tool.black]
 line-length = 100
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py39', 'py310', 'py311', 'py312', 'py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -105,6 +106,16 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -117,20 +128,12 @@ select = [
 ignore = []
 fixable = ["ALL"]
 unfixable = []
-exclude = [
-    ".git",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".venv",
-    "build",
-    "dist",
-]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 [tool.coverage.run]
-source = ["waf_presence_checker"]
+source = ["edgeprint"]
 omit = ["tests/*", "**/__pycache__/*"]
 
 [tool.coverage.report]

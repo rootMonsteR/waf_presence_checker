@@ -4,7 +4,7 @@ This module defines the core data structures used throughout the WAF presence ch
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 @dataclass
@@ -18,10 +18,11 @@ class HttpObservation:
         headers: Dictionary of HTTP response headers
         body_excerpt: Optional excerpt of the response body (limited length for safety)
     """
+
     url: str = ""
     method: str = "GET"
     status_code: int = 0
-    headers: Dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
     body_excerpt: Optional[str] = None
 
 
@@ -36,6 +37,7 @@ class Indicator:
         weight: Confidence weight (0.0-1.0) for this indicator
         note: Human-readable description of what this indicator means
     """
+
     source: str
     key: str
     value: str
@@ -54,8 +56,9 @@ class DetectionReport:
         vendor_guesses: List of potential WAF vendors, ordered by likelihood
         rationale: Human-readable explanation of the detection decision
     """
+
     likely_waf: bool
     confidence: float
-    indicators: List[Indicator]
-    vendor_guesses: List[str]
+    indicators: list[Indicator]
+    vendor_guesses: list[str]
     rationale: str

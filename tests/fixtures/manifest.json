@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "description": "Ground-truth fixtures for edgeprint. Seed of the benchmark corpus; the schema is shared with lab- and CNAME-labelled records so they slot in without migration.",
+  "label_sources": {
+    "synthetic": "Hand-built from publicly documented vendor response patterns. Lowest confidence tier; to be replaced by lab captures.",
+    "lab": "Captured from a WAF we stood up ourselves. Label is known, not inferred.",
+    "cname": "Live host labelled by DNS CNAME delegation.",
+    "cidr": "Live host labelled by vendor-published IP range."
+  },
+  "fixtures": [
+    {"file": "positive/cloudflare_200.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Cloudflare (edge firewall/CDN)"},
+    {"file": "positive/akamai_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Akamai (edge)", "regression": "Suffixed x-akamai-* headers were missed by an exact-key match."},
+    {"file": "positive/imperva_200.txt",     "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Imperva/Incapsula"},
+    {"file": "positive/sucuri_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Sucuri"},
+    {"file": "positive/f5_bigip_200.txt",    "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "F5 (BIG-IP ASM/Advanced WAF)"},
+    {"file": "positive/modsecurity_403.txt", "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "ModSecurity (various vendors)"},
+    {"file": "positive/cloudfront_200.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "AWS (CloudFront/AWS WAF)"},
+    {"file": "positive/fastly_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Fastly"},
+
+    {"file": "negative/nginx_403_plain.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": false, "regression": "A bare 403 body scored as WAF evidence with no corroborating signal."},
+    {"file": "negative/apache_404_plain.txt", "format": "raw", "label_source": "synthetic", "expect_waf": false},
+    {"file": "negative/nginx_200_plain.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": false},
+    {"file": "negative/iis_500_plain.txt",    "format": "raw", "label_source": "synthetic", "expect_waf": false, "regression": "Body contains 'Access denied' with no vendor signal; must not count."}
+  ]
+}

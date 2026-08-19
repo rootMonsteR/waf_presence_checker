@@ -1,0 +1,5 @@
+HTTP/1.1 403 Forbidden
+Content-Type: text/html
+Server: Apache/2.4.58 (Unix) mod_security/2.9.7
+
+<html><head><title>403 Forbidden</title></head><body><h1>Forbidden</h1><p>Not Acceptable! Request blocked by mod_security.</p></body></html>

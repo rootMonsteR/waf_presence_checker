@@ -1,5 +1,7 @@
-from .models import DetectionReport
 import json
+
+from .models import DetectionReport
+
 
 def to_text(report: DetectionReport) -> str:
     lines = []
@@ -15,17 +17,24 @@ def to_text(report: DetectionReport) -> str:
             lines.append(f"  - [{i.weight:.2f}] {i.source} :: {i.key} :: {i.note}")
     return "\n".join(lines)
 
+
 def to_json(report: DetectionReport) -> str:
-    return json.dumps({
-        "likely_waf": report.likely_waf,
-        "confidence": report.confidence,
-        "vendor_guesses": report.vendor_guesses,
-        "rationale": report.rationale,
-        "indicators": [{
-            "source": i.source,
-            "key": i.key,
-            "value": i.value,
-            "weight": i.weight,
-            "note": i.note
-        } for i in report.indicators]
-    }, indent=2)
+    return json.dumps(
+        {
+            "likely_waf": report.likely_waf,
+            "confidence": report.confidence,
+            "vendor_guesses": report.vendor_guesses,
+            "rationale": report.rationale,
+            "indicators": [
+                {
+                    "source": i.source,
+                    "key": i.key,
+                    "value": i.value,
+                    "weight": i.weight,
+                    "note": i.note,
+                }
+                for i in report.indicators
+            ],
+        },
+        indent=2,
+    )

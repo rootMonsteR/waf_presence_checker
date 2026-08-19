@@ -1,323 +1,88 @@
-# WAF Presence Checker (Lite, Offline)
+# edgeprint
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+Fingerprints WAF, CDN and edge protection from **HTTP responses you have already captured**. No network traffic, no live target, no rate limits.
 
-**Purpose:** Estimate whether a captured HTTP response likely came from an origin protected by a **Web Application Firewall (WAF)**, CDN edge firewall, or similar security control — *without sending any network traffic*.
+Active scanners answer *"what is in front of this one host, right now?"* — and [wafw00f](https://github.com/EnableSecurity/wafw00f) answers it well, across 200+ products. edgeprint answers a different question: *"what is the edge-protection posture across every response in this capture?"* — a HAR export, a proxy log, a recon pipeline's output, an incident-response archive.
 
-This project is intentionally **offline-only** to support:
-- 🔍 Forensic analysis of captured traffic
-- 📋 Pre-engagement reconnaissance planning
-- 🛡️ Security posture assessment
-- 📊 Compliance documentation
+That makes it complementary to the active tools, not a replacement for them.
 
-By design, this tool **does not** send network requests, helping to minimize misuse and encourage compliance with **Rules of Engagement (ROE)**.
+> **Status: early.** 8 vendor fingerprints against wafw00f's 200+. The detection engine is heuristic and uncalibrated. See [Roadmap](#roadmap) for where this is going and [Limits](#limits) for what it cannot do.
 
----
-
-## ⚠️ IMPORTANT DISCLAIMER
-
-### Legal and Ethical Use Only
-
-**USE THIS TOOL ONLY WITH EXPLICIT AUTHORIZATION.**
-
-- ✅ **Authorized Use:** Security testing with written permission, CTF competitions, research on systems you own, educational purposes
-- ❌ **Prohibited Use:** Unauthorized testing, malicious reconnaissance, evasion of security controls without permission
-- 📜 **Your Responsibility:** You are solely responsible for ensuring you have proper authorization before collecting or analyzing HTTP traffic
-- ⚖️ **Legal Notice:** Unauthorized access to computer systems may violate laws including the Computer Fraud and Abuse Act (CFAA) and similar laws in other jurisdictions
-
-This tool analyzes files you provide. **Do not collect files from systems you are not authorized to test.**
-
----
-
-## Features
-
-- ✨ **Multiple Input Formats:** Parse raw `curl -i` dumps, JSON observations, or HAR (HTTP Archive) files
-- 🎯 **Heuristic Analysis:** Signature and pattern-based scoring with transparent rationale
-- 🔒 **Offline Only:** No network access; completely deterministic and auditable
-- 📊 **Detailed Reports:** Human-readable text or machine-readable JSON output
-- 🏷️ **Vendor Detection:** Identifies potential WAF vendors (Cloudflare, Akamai, Imperva, F5, etc.)
-- 🔍 **Confidence Scoring:** Clear confidence levels (0.0-1.0) for detection decisions
-- 📝 **Forensic Ready:** Generate reports suitable for documentation and compliance artifacts
-
-## Installation
-
-### From Source (Recommended)
+## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/waf-presence-checker.git
-cd waf-presence-checker
-
-# Install in editable mode
 pip install -e .
-
-# Or install with development dependencies
-pip install -e ".[dev]"
 ```
 
-### Requirements
+Python 3.9+. No runtime dependencies.
 
-- Python 3.9 or higher
-- No external runtime dependencies (pure Python standard library)
-
-## Quick Start
-
-### 1. Capture HTTP Response (Authorized Target Only)
+## Use
 
 ```bash
-# Using curl to capture headers from an authorized target
-curl -I -sD headers.txt https://example.com
-
-# Or save full response including body
+# Capture from an authorized target, or use traffic you already have
 curl -i https://example.com > response.txt
 
-# Using browser DevTools: Export as HAR file
-# Chrome/Edge: DevTools → Network → Right-click → "Save all as HAR"
+edgeprint analyze -i response.txt              # format auto-detected
+edgeprint analyze -i capture.har --format har
+edgeprint analyze -i response.txt --json
 ```
 
-### 2. Analyze Offline
-
-```bash
-# Analyze captured headers
-wafpc analyze -i headers.txt --format raw
-
-# Analyze HAR file
-wafpc analyze -i capture.har --format har
-
-# Auto-detect format
-wafpc analyze -i response.txt
-
-# Get JSON output for automation
-wafpc analyze -i headers.txt --json
-```
-
-## Usage Examples
-
-### Basic Analysis
-
-```bash
-wafpc analyze -i examples/sample_headers.txt
-```
-
-**Output:**
 ```
 WAF Presence: LIKELY PRESENT (confidence=0.70)
-Possible vendors: Cloudflare (edge firewall/CDN)
-Rationale: Vendor hints: Cloudflare (edge firewall/CDN) (0.70); Headers: cf-ray, server
-
+Possible vendors: Akamai (edge)
+Rationale: Vendor hints: Akamai (edge) (0.70); Headers: server, x-akamai-transformed, x-check-cacheable; Cookies: ak_bmsc
 Indicators:
-  - [0.25] header:server :: server :: Cloudflare (edge firewall/CDN) hint
-  - [0.25] header:cf-ray :: cf-ray :: Cloudflare (edge firewall/CDN) hint
-  - [0.20] cookie :: __cfduid :: Cloudflare (edge firewall/CDN) cookie hint
+  - [0.25] header:server :: server :: Akamai (edge) hint
+  - [0.25] header:x-akamai-transformed :: x-akamai-transformed :: Akamai (edge) hint
+  - [0.25] header:x-check-cacheable :: x-check-cacheable :: Akamai (edge) hint
+  - [0.20] cookie :: ak_bmsc :: Akamai (edge) cookie hint
 ```
 
-### JSON Output for Automation
+**Input formats:** raw `curl -i` dumps, JSON observations, HAR exports (Burp, ZAP, browser DevTools).
 
-```bash
-wafpc analyze -i response.har --json > report.json
-```
+**Exit codes:** `0` no WAF detected · `1` nothing analyzable · `2` WAF likely present.
 
-**Output:**
-```json
-{
-  "likely_waf": true,
-  "confidence": 0.70,
-  "vendor_guesses": ["Cloudflare (edge firewall/CDN)"],
-  "rationale": "Vendor hints: Cloudflare (0.70); Headers: cf-ray, server",
-  "indicators": [
-    {
-      "source": "header:server",
-      "key": "server",
-      "value": "cloudflare",
-      "weight": 0.25,
-      "note": "Cloudflare (edge firewall/CDN) hint"
-    }
-  ]
-}
-```
+## Detected
 
-### Verbose Logging
+Cloudflare · Akamai · Imperva/Incapsula · Sucuri · ModSecurity · F5 BIG-IP · AWS CloudFront/WAF · Fastly
 
-```bash
-wafpc analyze -i headers.txt --verbose
-```
+Every fingerprint is backed by a capture in [`tests/fixtures/`](tests/fixtures/) and asserted in CI. Coverage is deliberately narrow and verified rather than broad and untested — that ratio is the point, and it will change as the fingerprint database lands.
 
-## Exit Codes
+## How it works
 
-The CLI returns different exit codes for automation:
+Headers, cookies and body markers are matched against the fingerprint database; matches accumulate into a per-vendor score.
 
-- **0**: No WAF detected (low confidence)
-- **1**: Indeterminate result or error
-- **2**: WAF likely present (medium-high confidence)
+Two properties worth knowing, because most tools in this space have neither:
 
-**Example Script:**
-```bash
-#!/bin/bash
-wafpc analyze -i target_headers.txt
-case $? in
-    0) echo "No WAF detected" ;;
-    2) echo "WAF detected - proceed with caution" ;;
-    *) echo "Analysis inconclusive" ;;
-esac
-```
+- **Generic block pages need corroboration.** `request blocked` / `access denied` / `forbidden` count only when an independent vendor signal is also present. Alone they are indistinguishable from an ordinary origin returning 403, and counting them unconditionally false-positives on stock nginx and Apache error pages.
+- **No single vendor can saturate the score.** Each vendor's contribution is capped, so a vendor matching four header signals does not automatically produce total confidence.
 
-## Supported Input Formats
+## Limits
 
-### Raw HTTP Headers (`--format raw`)
+Passive analysis reads what the edge already told you. It cannot see rule sets, rate-limit thresholds, bot-management configuration, or whether a WAF is in block or detect-only mode — those need active probing, and [wafw00f](https://github.com/EnableSecurity/wafw00f) or [identYwaf](https://github.com/stamparm/identYwaf) are the right tools for it.
 
-```
-HTTP/1.1 200 OK
-Server: cloudflare
-CF-Ray: 1234567890abc
-Content-Type: text/html
+Confidence scores are currently **hand-assigned, not measured**. Treat `0.70` as "several signals agreed", not as a 70% probability. Fixing this is the main point of the roadmap.
 
-<html>...</html>
-```
+## Roadmap
 
-### JSON Observation (`--format json`)
-
-```json
-{
-  "url": "https://example.com",
-  "method": "GET",
-  "status_code": 200,
-  "headers": {
-    "Server": "cloudflare",
-    "CF-Ray": "1234567890abc"
-  },
-  "body_excerpt": "<html>..."
-}
-```
-
-### HAR File (`--format har`)
-
-Standard HAR format exported from browser DevTools or proxy tools like Burp Suite, OWASP ZAP.
-
-## Detected WAF Vendors
-
-Current fingerprint database includes (but is not limited to):
-
-- ☁️ Cloudflare (CDN/Edge Firewall)
-- 🌐 Akamai (Edge Security)
-- 🛡️ Imperva/Incapsula
-- 🔐 Sucuri Website Firewall
-- ⚙️ ModSecurity (various vendors)
-- 🔧 F5 ASM/Advanced WAF
-
-**Note:** Fingerprints are based on publicly documented patterns and should not be considered exhaustive or authoritative.
-
-## How It Works
-
-1. **Input Parsing:** Reads HTTP observations from files (no network activity)
-2. **Normalization:** Normalizes headers for case-insensitive comparison
-3. **Pattern Matching:** Checks against vendor fingerprints and generic WAF indicators
-4. **Scoring:** Calculates confidence based on weighted indicators
-5. **Reporting:** Generates human-readable or JSON output with rationale
-
-## Why Offline?
-
-- 🔒 **Security:** Prevents accidental unauthorized testing
-- 📋 **Compliance:** Encourages proper ROE and authorization
-- 🔍 **Forensics:** Analyze historical captures without re-requesting
-- 🎯 **Precision:** Deterministic results for documentation
-- 🚫 **No Evasion:** Does not provide active scanning or bypass capabilities
-
-## Documentation
-
-- 📄 [White Paper](docs/WHITEPAPER.md) - Technical methodology and design decisions
-- 📋 [ROE Template](docs/ROE_TEMPLATE.md) - Rules of Engagement template for authorized testing
-- 📖 [Usage Guide](docs/USAGE.md) - Detailed usage examples and workflows
-
-## Development
-
-### Setting Up Development Environment
-
-```bash
-# Install with development dependencies
-pip install -e ".[dev]"
-
-# Run type checking
-mypy waf_presence_checker/
-
-# Format code
-black waf_presence_checker/
-
-# Lint code
-ruff check waf_presence_checker/
-```
-
-### Project Structure
-
-```
-waf_presence_checker/
-├── waf_presence_checker/
-│   ├── __init__.py       # Package initialization
-│   ├── analyzer.py       # Core analysis engine
-│   ├── cli.py           # Command-line interface
-│   ├── fingerprints.py  # WAF fingerprint database
-│   ├── models.py        # Data models
-│   ├── parsers.py       # Input format parsers
-│   └── reporters.py     # Output formatters
-├── tests/               # Test suite
-├── docs/                # Documentation
-├── examples/            # Example input files
-└── pyproject.toml       # Project configuration
-```
+1. ~~Credibility: verified fixtures, CI, honest scope~~ ✅
+2. **Fingerprint database** — versioned YAML, aggregated from permissively-licensed upstreams, published as a standalone artifact consumable by any tool
+3. **WAF lab** — Docker stack running real WAFs (ModSecurity, Coraza, SafeLine, BunkerWeb…) to generate ground truth with *known* labels rather than inferred ones
+4. **Benchmark** — the first published precision/recall figures for WAF detection, scoring edgeprint against wafw00f, wafme0w and identYwaf on a labelled corpus. Existing WAF benchmarks measure whether a WAF blocks attacks; none measure whether detection tools are correct
+5. **Calibrated engine** — replace hand-assigned weights with likelihood ratios measured from lab and corpus data
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+New fingerprints are welcome and must arrive with a capture: add the response to `tests/fixtures/`, add a row to `tests/fixtures/manifest.json`, and the test suite picks it up automatically. Fingerprints without a fixture will not be merged — that rule is what keeps the database honest.
 
-Areas where contributions are especially welcome:
-- Additional WAF fingerprints (with documentation)
-- Improved detection heuristics
-- Additional input format parsers
-- Documentation improvements
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Security
+## Attribution and licensing
 
-For security issues, please see [SECURITY.md](SECURITY.md) for responsible disclosure guidelines.
+Engine: MIT (see [LICENSE](LICENSE)). Fingerprint database: Apache-2.0, because it aggregates BSD-3-Clause, MIT and Apache-2.0 material and Apache-2.0 is the only one of the three that absorbs the others coherently.
 
-## License
+Upstream projects and their attribution requirements are recorded in [NOTICE](NOTICE), including two deliberate exclusions: **WhatWaf** (GPL — cannot be relicensed into this compilation) and **JA4S** (FoxIO License 1.1 — not permissive for monetization).
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Responsible use
 
-## Responsible Use Statement
-
-This tool is designed for **defensive security** purposes and **authorized security testing only**. The authors:
-
-- ✅ Support authorized penetration testing and security research
-- ✅ Encourage responsible disclosure and ethical security practices
-- ❌ Do not condone unauthorized access or malicious use
-- ❌ Are not responsible for misuse of this tool
-
-**By using this tool, you agree to use it only for authorized and legal purposes.**
-
-## Acknowledgments
-
-- Inspired by the need for safe, offline security analysis tools
-- Built with Python's excellent standard library
-- Community fingerprint contributions welcome
-
-## FAQ
-
-**Q: Does this tool actively scan websites?**
-A: No. This tool only analyzes files you provide. It makes zero network requests.
-
-**Q: Is this tool 100% accurate?**
-A: No. WAF detection is heuristic-based and may have false positives/negatives. Use as one data point in your analysis.
-
-**Q: Can I use this for bug bounty programs?**
-A: Yes, if the program's scope permits. Always follow the program's rules and only analyze authorized targets.
-
-**Q: Will this help me bypass WAFs?**
-A: No. This tool is for detection only and does not provide evasion techniques.
-
-**Q: How can I add new WAF fingerprints?**
-A: See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting fingerprints.
-
----
-
-**Remember: Always obtain proper authorization before security testing. When in doubt, ask for permission first.**
+Analyze only traffic you are authorized to possess. This tool reads files you give it and makes no requests of its own, but that does not make the underlying capture lawful — authorization is your responsibility.

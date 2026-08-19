@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+Server: BigIP
+X-Cnection: close
+Set-Cookie: BIGipServerpool_web=1234567890.20480.0000; path=/
+
+<html><body>hello</body></html>

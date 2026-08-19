@@ -1,0 +1,6 @@
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/html
+Server: Microsoft-IIS/10.0
+X-Powered-By: ASP.NET
+
+<html><head><title>500 - Internal server error.</title></head><body>Access denied.</body></html>

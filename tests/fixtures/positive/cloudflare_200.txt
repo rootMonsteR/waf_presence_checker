@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Date: Mon, 19 Aug 2026 12:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Server: cloudflare
+CF-RAY: 8b2f1e4c9a7d3f21-LHR
+CF-Cache-Status: DYNAMIC
+Set-Cookie: __cf_bm=Ab1Cd2Ef3; path=/; HttpOnly; Secure; SameSite=None
+
+<html><body>hello</body></html>
