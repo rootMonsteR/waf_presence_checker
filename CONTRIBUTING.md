@@ -154,19 +154,29 @@ When adding new WAF fingerprints, follow these guidelines:
 
 ### Fingerprint Structure
 
-Add fingerprints to `edgeprint/fingerprints.py`:
+Add fingerprints to `fingerprints/<vendor>.yaml`, then recompile with
+`python tools/build_fingerprints.py`. Do not edit `edgeprint/data/fingerprints.json`
+by hand — it is generated, and CI checks it matches the YAML.
 
-```python
-{
-    "vendor": "VendorName WAF",
-    "header_contains": [
-        ("header-name", "value-substring"),  # header contains value
-        ("x-vendor-id", ""),                 # header merely present
-        ("x-vendor*", ""),                   # prefix match: x-vendor-request-id, etc.
-    ],
-    "cookie_contains": ["vendor_cookie_prefix", "vendor_session"],
-    "body_contains": ["vendor signature", "unique error message"]
-}
+```yaml
+vendor: VendorName WAF
+layers: [waf]              # what a match proves: cdn | waf | bot | ddos
+references:
+  - https://vendor.example/docs/response-headers
+
+signals:
+  - type: header
+    key: "x-vendor*"       # trailing * is a prefix match
+    contains: ""           # "" matches on presence alone
+    weight: 0.25
+    source: edgeprint
+    verified_against: tests/fixtures/positive/vendor_200.txt
+
+  - type: cookie
+    name_prefix: "vendor_session"   # matched against cookie NAMES, never values
+    weight: 0.20
+    source: edgeprint
+    verified_against: tests/fixtures/positive/vendor_200.txt
 ```
 
 Use a `*` suffix whenever the real header name carries a suffix. Exact-key matching

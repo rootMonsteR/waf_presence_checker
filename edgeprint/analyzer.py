@@ -25,6 +25,19 @@ WEIGHT_COOKIE: float = 0.20
 WEIGHT_BODY: float = 0.15
 
 
+def _weight(fp: dict, kind: str, key: str, default: float) -> float:
+    """Per-signal weight from the database, falling back to the type default.
+
+    Weights are currently hand-assigned placeholders. Replacing them with
+    likelihood ratios measured against a labelled corpus is the point of the
+    roadmap, and routing every lookup through here is what makes that a data
+    change rather than a code change.
+    """
+    weights = fp.get("weights") or {}
+    value = weights.get(f"{kind}:{key}")
+    return float(value) if value is not None else default
+
+
 def _norm_headers(h: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]:
     """Build the lowercased map used for matching, and a raw map for reporting.
 
@@ -87,7 +100,7 @@ def _cookie_names(headers: dict[str, str]) -> list[str]:
     return names
 
 
-def _cookie_hits(cookie_names: list[str], needles: list[str]) -> list[str]:
+def _cookie_hits(cookie_names: list[str], needles: list[str]) -> list[tuple[str, str]]:
     """Match fingerprint needles against cookie *names*, returning names found.
 
     Matching against the whole Set-Cookie header instead of the parsed names made
@@ -100,13 +113,14 @@ def _cookie_hits(cookie_names: list[str], needles: list[str]) -> list[str]:
         needles: Cookie name prefixes to search for
 
     Returns:
-        The observed cookie names that matched
+        (needle, observed_name) pairs. The needle is returned alongside so the
+        caller can resolve that signal's weight and layer override.
     """
     hits = []
     for name in cookie_names:
         for n in needles:
             if name.startswith(n.lower()):
-                hits.append(name)
+                hits.append((n, name))
                 break
     return hits
 
@@ -164,19 +178,18 @@ def analyze(ob: HttpObservation) -> DetectionReport:
                         f"header:{matched}",
                         matched,
                         raw_headers[matched],
-                        WEIGHT_HEADER,
+                        _weight(fp, "header", k, WEIGHT_HEADER),
                         f"{vendor} hint",
                     )
                 )
-                vote += WEIGHT_HEADER
+                vote += _weight(fp, "header", k, WEIGHT_HEADER)
                 matched_signals.append(matched)
 
-        for name in _cookie_hits(cookie_names, fp.get("cookie_contains", [])):
-            indicators.append(
-                Indicator("cookie", name, name, WEIGHT_COOKIE, f"{vendor} cookie hint")
-            )
-            vote += WEIGHT_COOKIE
-            matched_signals.append(name)
+        for needle, name in _cookie_hits(cookie_names, fp.get("cookie_contains", [])):
+            w = _weight(fp, "cookie", needle, WEIGHT_COOKIE)
+            indicators.append(Indicator("cookie", name, name, w, f"{vendor} cookie hint"))
+            vote += w
+            matched_signals.append(needle)
 
         # body patterns (excerpt only; offline-safe)
         for b in fp.get("body_contains", []):

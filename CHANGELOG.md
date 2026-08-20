@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-20
+
+### Added
+- **Fingerprint database extracted from code into data.** Fingerprints now live in
+  `fingerprints/*.yaml`, one file per vendor, carrying per-signal weights, layer
+  tags, provenance (`source`) and a required `verified_against` fixture path.
+- `tools/build_fingerprints.py` compiles the YAML to `edgeprint/data/fingerprints.json`,
+  which is what the engine loads. The runtime keeps zero dependencies (PyYAML is a
+  dev dependency only) while contributors get a format with comments. `--check`
+  fails if the compiled output is stale, and CI runs it.
+- The build step doubles as a validator enforcing the rules that previous bugs came
+  from: generic block phrases are rejected as vendor signals, cookie prefixes under
+  three characters are rejected, and every signal must name a fixture that exists.
+- `fingerprints/SCHEMA.md` documents the format and the reasoning behind each rule.
+- Per-signal weights are read from the database with type defaults as fallback, so
+  replacing hand-assigned weights with measured likelihood ratios becomes a data
+  change rather than a code change.
+
+### Changed
+- `edgeprint/fingerprints.py` is now a loader rather than the database itself; it
+  exposes `FINGERPRINTS`, `SCHEMA_VERSION`, `vendor_count()` and `signal_count()`.
+- The compiled JSON ships in the wheel and is language-neutral, so other tools can
+  consume the database without depending on this package.
+
 ## [0.2.0] - 2026-08-19
 
 Renamed to **edgeprint** and repositioned from "offline WAF presence checker" to

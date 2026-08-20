@@ -4,138 +4,70 @@
 # the rest of edgeprint), because it is a compilation that aggregates material
 # under BSD-3-Clause, MIT and Apache-2.0 terms. Apache-2.0 absorbs all three
 # coherently; MIT cannot relabel Apache-2.0 material. See LICENSE-APACHE and NOTICE.
-"""WAF / CDN / edge-protection fingerprint database.
+"""Loader for the WAF / CDN / edge-protection fingerprint database.
 
-Signals are drawn from publicly documented patterns and validated against
-captured responses in ``tests/fixtures/``. Every entry is expected to be
-backed by a real capture before it earns a weight.
+The database is authored as YAML in ``fingerprints/`` — one file per vendor, with
+comments and per-signal provenance — and compiled by ``tools/build_fingerprints.py``
+into ``edgeprint/data/fingerprints.json``, which is what ships and what this module
+reads. The split keeps the runtime free of dependencies while leaving contributors
+a format worth reviewing; CI fails if the two drift apart.
 
-Provenance: the signals below were written from publicly documented vendor
-response patterns, not copied from another project. The planned systematic
-import from permissively-licensed upstream databases (wafw00f, identYwaf,
-cdncheck, Awesome-WAF) will carry per-entry ``source`` attribution and the
-license notices recorded in NOTICE.
-
-This database is not exhaustive and is not vendor-endorsed. Header keys ending
-in ``*`` are prefix matches; a needle of ``""`` matches on header presence alone.
+The JSON is deliberately plain and language-neutral so other tools can consume the
+database without depending on this package.
 """
 
+import json
 from typing import Any
 
-# Fingerprint database
+try:  # Python 3.9+
+    from importlib.resources import files as _resource_files
+except ImportError:  # pragma: no cover - unreachable on supported versions
+    _resource_files = None  # type: ignore[assignment]
+
+_DATA_FILE = "fingerprints.json"
+
+
+def _load() -> dict:
+    if _resource_files is not None:
+        path = _resource_files("edgeprint").joinpath("data").joinpath(_DATA_FILE)
+        data: dict = json.loads(path.read_text(encoding="utf-8"))
+        return data
+    import pathlib  # pragma: no cover
+
+    here = pathlib.Path(__file__).parent / "data" / _DATA_FILE  # pragma: no cover
+    return json.loads(here.read_text(encoding="utf-8"))  # pragma: no cover
+
+
+_DB: dict = _load()
+
+SCHEMA_VERSION: int = _DB["schema_version"]
+
+#: Vendor fingerprints in the shape the analyzer consumes. Not exhaustive and not
+#: vendor-endorsed. Header keys ending in ``*`` are prefix matches; a ``contains``
+#: of ``""`` matches on header presence alone. Cookie entries are matched against
+#: parsed cookie *names*, never values.
 FINGERPRINTS: list[dict[str, Any]] = [
     {
-        "vendor": "Cloudflare (edge firewall/CDN)",
-        # Presence of cf-ray proves the CDN edge, not that filtering is enabled.
-        "layers": ["cdn"],
-        # Signals that additionally prove a filtering decision was made.
-        "signal_layers": {"cf-mitigated": "waf"},
-        "header_contains": [
-            ("server", "cloudflare"),
-            ("cf-ray", ""),
-            ("cf-cache-status", ""),
-            ("cf-mitigated", ""),
-        ],
-        "cookie_contains": ["__cfduid", "__cf_bm", "cf_clearance", "cf_ob_info", "cf_use_ob"],
-        "body_contains": ["attention required", "checking your browser"],
-    },
-    {
-        "vendor": "Akamai (edge)",
-        # Real Akamai headers are suffixed (x-akamai-transformed, x-akamai-request-id),
-        # so these must be prefix matches, not exact keys.
-        "layers": ["cdn"],
-        # _abck is set by Akamai Bot Manager, a distinct control from the CDN.
-        "signal_layers": {"_abck": "bot", "ak_bmsc": "bot", "bm_sv": "bot", "bm_mi": "bot"},
-        "header_contains": [
-            ("server", "akamai"),
-            ("x-akamai*", ""),
-            ("akamai-grn", ""),
-            ("x-check-cacheable", ""),
-        ],
-        "cookie_contains": ["ak_bmsc", "bm_sv", "bm_mi", "akaalb_", "aka_a2", "_abck"],
-        "body_contains": ["akamai"],
-    },
-    {
-        "vendor": "Imperva/Incapsula",
-        "layers": ["waf"],
-        "header_contains": [
-            ("x-iinfo", ""),
-            ("x-cdn", "incapsula"),
-        ],
-        "cookie_contains": ["incap_ses", "visid_incap", "nlbi_"],
-        # "request blocked" was listed here, but it is also a generic BLOCK_PATTERN
-        # and a stock phrase on many origins. A signal that generic cannot serve as
-        # vendor evidence, and letting it do so allowed a block page to corroborate
-        # itself into a false positive.
-        "body_contains": ["incapsula", "powered by imperva"],
-    },
-    {
-        "vendor": "Sucuri",
-        "layers": ["waf"],
-        "header_contains": [
-            ("x-sucuri-id", ""),
-            ("x-sucuri-cache", ""),
-            ("server", "sucuri"),
-        ],
-        "cookie_contains": ["sucuri_cloudproxy_uuid"],
-        "body_contains": ["sucuri website firewall", "access denied - sucuri"],
-    },
-    {
-        "vendor": "ModSecurity (various vendors)",
-        "layers": ["waf"],
-        "header_contains": [
-            ("x-modsecurity*", ""),
-            ("x-powered-by", "mod_security"),
-            ("server", "mod_security"),
-        ],
-        "cookie_contains": [],
-        "body_contains": ["mod_security", "modsecurity"],
-    },
-    {
-        "vendor": "F5 (BIG-IP ASM/Advanced WAF)",
-        "layers": ["waf"],
-        "header_contains": [
-            ("x-asm*", ""),
-            ("server", "bigip"),
-            ("x-cnection", "close"),
-        ],
-        # BIG-IP ASM does set TS<hex> persistence cookies, but "ts" is far too short
-        # to use as a name prefix without firing on unrelated cookies; the original
-        # "ts01"/"ts02" entries were arbitrary instances rather than real patterns.
-        # Matching them safely needs regex support in the fingerprint schema.
-        "cookie_contains": ["bigipserver", "f5avr", "mrhsession", "lastmrh_session"],
-        "body_contains": ["the requested url was rejected", "your support id is"],
-    },
-    {
-        "vendor": "AWS CloudFront (CDN)",
-        "layers": ["cdn"],
-        "header_contains": [
-            ("x-amz-cf-id", ""),
-            ("x-amz-cf-pop", ""),
-            ("via", "cloudfront"),
-            ("server", "cloudfront"),
-        ],
-        "cookie_contains": [],
-        "body_contains": ["generated by cloudfront"],
-    },
-    {
-        "vendor": "AWS WAF",
-        "layers": ["waf"],
-        "header_contains": [
-            ("x-amzn-waf*", ""),
-        ],
-        "cookie_contains": ["aws-waf-token"],
-        "body_contains": [],
-    },
-    {
-        "vendor": "Fastly",
-        "layers": ["cdn"],
-        "header_contains": [
-            ("x-served-by", "cache-"),
-            ("x-fastly*", ""),
-            ("fastly-restarts", ""),
-        ],
-        "cookie_contains": [],
-        "body_contains": ["fastly error"],
-    },
+        "vendor": v["vendor"],
+        "layers": v["layers"],
+        "signal_layers": v.get("signal_layers", {}),
+        "header_contains": [tuple(pair) for pair in v.get("header_contains", [])],
+        "cookie_contains": v.get("cookie_contains", []),
+        "body_contains": v.get("body_contains", []),
+        "weights": v.get("weights", {}),
+    }
+    for v in _DB["vendors"]
 ]
+
+
+def vendor_count() -> int:
+    """Number of vendors in the loaded database."""
+    return len(FINGERPRINTS)
+
+
+def signal_count() -> int:
+    """Total number of signals across all vendors."""
+    return sum(
+        len(v["header_contains"]) + len(v["cookie_contains"]) + len(v["body_contains"])
+        for v in FINGERPRINTS
+    )

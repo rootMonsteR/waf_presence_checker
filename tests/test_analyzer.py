@@ -200,3 +200,87 @@ def test_exit_codes_are_distinct():
 def test_analyze_rejects_none():
     with pytest.raises(ValueError):
         analyze(None)
+
+
+# --- fingerprint database ---------------------------------------------------
+
+
+def test_compiled_database_matches_yaml_sources():
+    """The shipped JSON must be current with fingerprints/*.yaml.
+
+    The engine loads JSON so the runtime has no dependencies, while the YAML is
+    what contributors edit. Drift between them would mean reviewing one file and
+    shipping another.
+    """
+    build = pytest.importorskip("tools.build_fingerprints", reason="build tooling not importable")
+    assert build.main(["--check"]) == 0
+
+
+def test_database_passes_its_own_validation():
+    """Every rule in fingerprints/SCHEMA.md is enforced, not merely documented."""
+    build = pytest.importorskip("tools.build_fingerprints")
+    problems = build.validate(build.load_sources())
+    assert problems == [], "\n".join(problems)
+
+
+def test_generic_block_phrases_are_rejected_as_vendor_signals():
+    """The validator must refuse the mistake that caused the false positive."""
+    build = pytest.importorskip("tools.build_fingerprints")
+    bad = [
+        {
+            "_file": "bogus.yaml",
+            "vendor": "Bogus",
+            "layers": ["waf"],
+            "signals": [
+                {
+                    "type": "body",
+                    "contains": "Request Blocked",
+                    "source": "edgeprint",
+                    "verified_against": "tests/fixtures/positive/imperva_200.txt",
+                }
+            ],
+        }
+    ]
+    problems = build.validate(bad)
+    assert any("generic block phrase" in p for p in problems), problems
+
+
+def test_short_cookie_prefixes_are_rejected():
+    """A prefix short enough to hit opaque session values must not pass review."""
+    build = pytest.importorskip("tools.build_fingerprints")
+    bad = [
+        {
+            "_file": "bogus.yaml",
+            "vendor": "Bogus",
+            "layers": ["waf"],
+            "signals": [
+                {
+                    "type": "cookie",
+                    "name_prefix": "ts",
+                    "source": "edgeprint",
+                    "verified_against": "tests/fixtures/positive/imperva_200.txt",
+                }
+            ],
+        }
+    ]
+    problems = build.validate(bad)
+    assert any("too short" in p for p in problems), problems
+
+
+def test_every_signal_names_an_existing_fixture():
+    """`verified_against` must point at a capture that exists."""
+    build = pytest.importorskip("tools.build_fingerprints")
+    for vendor in build.load_sources():
+        for sig in vendor["signals"]:
+            assert (
+                build.ROOT / sig["verified_against"]
+            ).exists(), f"{vendor['vendor']}: missing fixture {sig['verified_against']}"
+
+
+def test_database_covers_every_positive_fixture_vendor():
+    """Each vendor asserted by the manifest exists in the compiled database."""
+    from edgeprint.fingerprints import FINGERPRINTS
+
+    known = {f["vendor"] for f in FINGERPRINTS}
+    expected = {c["expect_vendor"] for c in CASES if c.get("expect_vendor")}
+    assert expected <= known, f"manifest names vendors absent from the database: {expected - known}"

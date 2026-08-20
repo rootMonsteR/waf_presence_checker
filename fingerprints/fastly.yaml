@@ -1,0 +1,27 @@
+vendor: "Fastly"
+layers: [cdn]
+references:
+  - https://developer.fastly.com/reference/http/http-headers/
+
+signals:
+  - type: header
+    key: "x-served-by"
+    contains: "cache-"
+    weight: 0.25
+    source: edgeprint
+    verified_against: tests/fixtures/positive/fastly_200.txt
+  - type: header
+    key: "x-fastly*"
+    weight: 0.25
+    source: edgeprint
+    verified_against: tests/fixtures/positive/fastly_200.txt
+  - type: header
+    key: "fastly-restarts"
+    weight: 0.25
+    source: edgeprint
+    verified_against: tests/fixtures/positive/fastly_200.txt
+  - type: body
+    contains: "fastly error"
+    weight: 0.15
+    source: edgeprint
+    verified_against: tests/fixtures/positive/fastly_200.txt
