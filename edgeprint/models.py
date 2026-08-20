@@ -49,16 +49,24 @@ class Indicator:
 class DetectionReport:
     """Final detection report with all findings and confidence assessment.
 
+    ``likely_waf`` and ``likely_edge`` are deliberately separate. A CDN is not a
+    WAF: a Fastly- or CloudFront-fronted host shows strong edge signals while
+    saying nothing about whether request filtering is in place.
+
     Attributes:
-        likely_waf: Boolean indicating if WAF presence is likely
-        confidence: Overall confidence score (0.0-1.0)
-        indicators: List of all indicators found during analysis
-        vendor_guesses: List of potential WAF vendors, ordered by likelihood
+        likely_waf: Whether a WAF-layer control is likely present
+        likely_edge: Whether any edge product (CDN, WAF, bot management) is likely
+        confidence: Overall confidence that some edge product is present (0.0-1.0)
+        layers: Per-layer confidence, e.g. {"cdn": 0.70, "waf": 0.35}
+        indicators: All indicators found during analysis
+        vendor_guesses: Potential vendors, ordered by likelihood
         rationale: Human-readable explanation of the detection decision
     """
 
     likely_waf: bool
+    likely_edge: bool
     confidence: float
+    layers: dict[str, float]
     indicators: list[Indicator]
     vendor_guesses: list[str]
     rationale: str

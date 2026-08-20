@@ -2,7 +2,7 @@
 
 ## Reporting Security Vulnerabilities
 
-The security of WAF Presence Checker is important to us. If you discover a security vulnerability, we appreciate your help in disclosing it to us responsibly.
+The security of edgeprint is important to us. If you discover a security vulnerability, we appreciate your help in disclosing it to us responsibly.
 
 ### How to Report
 
@@ -243,4 +243,4 @@ If you have questions about this security policy:
 
 ---
 
-**Thank you for helping keep WAF Presence Checker and its users safe!**
+**Thank you for helping keep edgeprint and its users safe!**

@@ -1,0 +1,7 @@
+HTTP/1.1 403 Forbidden
+Content-Type: text/html
+Server: awselb/2.0
+x-amzn-waf-action: block
+Set-Cookie: aws-waf-token=abc123-def456; Path=/; Secure
+
+<html><body>Request blocked.</body></html>

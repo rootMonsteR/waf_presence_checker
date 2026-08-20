@@ -13,8 +13,29 @@ from .models import HttpObservation
 logger = logging.getLogger(__name__)
 
 
+def _add_header(headers: dict, key: str, value: str) -> None:
+    """Record a header, preserving repeats instead of overwriting them.
+
+    Repeated fields are legal and load-bearing: a response commonly sends several
+    ``Set-Cookie`` lines, and overwriting kept only the last one, silently
+    discarding cookie signals. ``Set-Cookie`` is joined with newlines because a
+    comma is ambiguous inside cookie ``Expires`` dates; other fields use the
+    comma form from RFC 7230 section 3.2.2.
+    """
+    if key in headers:
+        sep = "\n" if key.lower() == "set-cookie" else ", "
+        headers[key] = headers[key] + sep + value
+    else:
+        headers[key] = value
+
+
 def parse_raw_headers(text: str) -> HttpObservation:
     """Parse raw HTTP headers from curl -i output or RFC822-style header blocks.
+
+    The header section ends at the first empty line, per RFC 7230 section 3. An
+    earlier version stripped blank lines and guessed the boundary from the first
+    line without a colon, which absorbed bodies containing CSS or quoted headers
+    into the header map.
 
     Args:
         text: Raw text containing HTTP response headers and optional body
@@ -23,51 +44,55 @@ def parse_raw_headers(text: str) -> HttpObservation:
         HttpObservation object with parsed data
 
     Raises:
-        ValueError: If the input text is empty or invalid
+        ValueError: If the input text is empty or contains no usable content
     """
     if not text or not text.strip():
         raise ValueError("Input text is empty")
 
-    lines = [line.rstrip("\r\n") for line in text.splitlines() if line.strip()]
-    if not lines:
+    lines = text.splitlines()
+    status_code = 0
+    headers: dict = {}
+    body_lines: list = []
+    in_headers = True
+
+    for line in lines:
+        if in_headers:
+            if not line.strip():
+                # Blank line terminates the header section, but skip leading
+                # blanks before the status line has been seen.
+                if headers or status_code:
+                    in_headers = False
+                continue
+            stripped = line.rstrip("\r\n")
+            if stripped.lower().startswith("http/"):
+                for part in stripped.split():
+                    if part.isdigit():
+                        status_code = int(part)
+                        break
+                continue
+            if ":" in stripped:
+                k, v = stripped.split(":", 1)
+                _add_header(headers, k.strip(), v.strip())
+                continue
+            # A non-blank, colon-free line inside the header block is malformed;
+            # treat everything from here as body rather than dropping it.
+            in_headers = False
+            body_lines.append(stripped)
+        else:
+            body_lines.append(line)
+
+    if not headers and status_code == 0 and not body_lines:
         raise ValueError("No valid content found in input")
 
-    status_code = 0
-    headers: dict[str, str] = {}
-    url = ""
-    body_excerpt = None
-
-    # Find status line and headers until blank line
-    in_headers = True
-    for line in lines:
-        if in_headers and line.lower().startswith("http/"):
-            # HTTP/1.1 200 OK
-            parts = line.split()
-            for p in parts:
-                if p.isdigit():
-                    try:
-                        status_code = int(p)
-                    except ValueError:
-                        logger.warning(f"Could not parse status code from: {p}")
-                    break
-            continue
-        if in_headers and ":" in line:
-            k, v = line.split(":", 1)
-            headers[k.strip()] = v.strip()
-            continue
-        # crude separation; if we see something without colon after status, treat remainder as body
-        if ":" not in line and in_headers:
-            in_headers = False
-        if not in_headers:
-            body_excerpt = (body_excerpt or "") + (line + "\n")
+    body_excerpt = "\n".join(body_lines).strip() or None
 
     logger.debug(f"Parsed raw headers: status={status_code}, headers={len(headers)}")
     return HttpObservation(
-        url=url,
+        url="",
         method="GET",
         status_code=status_code,
         headers=headers,
-        body_excerpt=body_excerpt[:4096] if body_excerpt else None,  # Limit body excerpt
+        body_excerpt=body_excerpt[:4096] if body_excerpt else None,
     )
 
 
@@ -161,7 +186,7 @@ def parse_har(text: str) -> HttpObservation:
     headers: dict[str, str] = {}
     for h in res.get("headers", []):
         if isinstance(h, dict) and "name" in h and "value" in h:
-            headers[h["name"]] = h["value"]
+            _add_header(headers, h["name"], h["value"])
 
     # Extract body excerpt with size limit
     body_excerpt = None

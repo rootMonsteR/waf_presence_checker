@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Ground-truth fixtures for edgeprint. Seed of the benchmark corpus; the schema is shared with lab- and CNAME-labelled records so they slot in without migration.",
   "label_sources": {
     "synthetic": "Hand-built from publicly documented vendor response patterns. Lowest confidence tier; to be replaced by lab captures.",
@@ -7,19 +7,182 @@
     "cname": "Live host labelled by DNS CNAME delegation.",
     "cidr": "Live host labelled by vendor-published IP range."
   },
+  "layers": {
+    "cdn": "Content delivery / caching edge. Presence says nothing about filtering.",
+    "waf": "Request filtering layer.",
+    "bot": "Bot management / anti-automation layer."
+  },
   "fixtures": [
-    {"file": "positive/cloudflare_200.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Cloudflare (edge firewall/CDN)"},
-    {"file": "positive/akamai_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Akamai (edge)", "regression": "Suffixed x-akamai-* headers were missed by an exact-key match."},
-    {"file": "positive/imperva_200.txt",     "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Imperva/Incapsula"},
-    {"file": "positive/sucuri_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Sucuri"},
-    {"file": "positive/f5_bigip_200.txt",    "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "F5 (BIG-IP ASM/Advanced WAF)"},
-    {"file": "positive/modsecurity_403.txt", "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "ModSecurity (various vendors)"},
-    {"file": "positive/cloudfront_200.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "AWS (CloudFront/AWS WAF)"},
-    {"file": "positive/fastly_200.txt",      "format": "raw", "label_source": "synthetic", "expect_waf": true,  "expect_vendor": "Fastly"},
-
-    {"file": "negative/nginx_403_plain.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": false, "regression": "A bare 403 body scored as WAF evidence with no corroborating signal."},
-    {"file": "negative/apache_404_plain.txt", "format": "raw", "label_source": "synthetic", "expect_waf": false},
-    {"file": "negative/nginx_200_plain.txt",  "format": "raw", "label_source": "synthetic", "expect_waf": false},
-    {"file": "negative/iis_500_plain.txt",    "format": "raw", "label_source": "synthetic", "expect_waf": false, "regression": "Body contains 'Access denied' with no vendor signal; must not count."}
+    {
+      "file": "positive/cloudflare_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn"
+      ],
+      "expect_vendor": "Cloudflare (edge firewall/CDN)",
+      "expect_exit": 3,
+      "notes": "cf-ray proves the CDN edge only; Cloudflare's WAF is optional and leaves separate signals."
+    },
+    {
+      "file": "positive/akamai_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn",
+        "bot"
+      ],
+      "expect_vendor": "Akamai (edge)",
+      "expect_exit": 3,
+      "regression": "Suffixed x-akamai-* headers were missed by an exact-key match."
+    },
+    {
+      "file": "positive/imperva_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "Imperva/Incapsula",
+      "expect_exit": 2,
+      "regression": "Repeated Set-Cookie lines were overwritten, so incap_ses never matched."
+    },
+    {
+      "file": "positive/sucuri_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "Sucuri",
+      "expect_exit": 2
+    },
+    {
+      "file": "positive/f5_bigip_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "F5 (BIG-IP ASM/Advanced WAF)",
+      "expect_exit": 2
+    },
+    {
+      "file": "positive/modsecurity_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "ModSecurity (various vendors)",
+      "expect_exit": 2
+    },
+    {
+      "file": "positive/cloudfront_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn"
+      ],
+      "expect_vendor": "AWS CloudFront (CDN)",
+      "expect_exit": 3
+    },
+    {
+      "file": "positive/awswaf_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "AWS WAF",
+      "expect_exit": 2
+    },
+    {
+      "file": "positive/fastly_200.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn"
+      ],
+      "expect_vendor": "Fastly",
+      "expect_exit": 3
+    },
+    {
+      "file": "positive/sucuri_observation.json",
+      "format": "json",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "Sucuri",
+      "expect_exit": 2,
+      "notes": "Exercises the JSON observation parser."
+    },
+    {
+      "file": "positive/cloudflare_waf_403.har",
+      "format": "har",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn",
+        "waf"
+      ],
+      "expect_vendor": "Cloudflare (edge firewall/CDN)",
+      "expect_exit": 2,
+      "notes": "cf-mitigated proves a filtering decision, not merely CDN delivery. Also exercises the HAR parser."
+    },
+    {
+      "file": "negative/nginx_403_plain.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0,
+      "regression": "A bare 403 body scored as WAF evidence with no corroborating signal."
+    },
+    {
+      "file": "negative/nginx_403_request_blocked.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0,
+      "regression": "'Request blocked' was listed as an Imperva and AWS body signal while also being a generic block pattern, letting the phrase corroborate itself into a false positive."
+    },
+    {
+      "file": "negative/apache_404_plain.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0
+    },
+    {
+      "file": "negative/nginx_200_plain.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0
+    },
+    {
+      "file": "negative/iis_500_plain.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0,
+      "regression": "Body contains 'Access denied' with no vendor signal; must not count."
+    },
+    {
+      "file": "negative/nginx_403_css_body.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0,
+      "regression": "A colon inside a CSS body was parsed as a header, absorbing the body into the header map."
+    },
+    {
+      "file": "negative/origin_opaque_cookie.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [],
+      "expect_exit": 0,
+      "regression": "Short cookie needles such as _abck matched inside opaque session values."
+    }
   ]
 }

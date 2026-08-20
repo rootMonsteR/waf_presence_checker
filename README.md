@@ -28,7 +28,8 @@ edgeprint analyze -i response.txt --json
 ```
 
 ```
-WAF Presence: LIKELY PRESENT (confidence=0.70)
+Edge protection: EDGE/CDN PRESENT, NO WAF EVIDENCE (confidence=0.70)
+Layers: cdn=0.70, bot=0.70
 Possible vendors: Akamai (edge)
 Rationale: Vendor hints: Akamai (edge) (0.70); Headers: server, x-akamai-transformed, x-check-cacheable; Cookies: ak_bmsc
 Indicators:
@@ -38,13 +39,19 @@ Indicators:
   - [0.20] cookie :: ak_bmsc :: Akamai (edge) cookie hint
 ```
 
+**Layers are reported separately, because a CDN is not a WAF.** Akamai serving your traffic proves a CDN edge and, via `ak_bmsc`, bot management — it does not prove request filtering. Most tools collapse all of this into "WAF detected"; edgeprint does not.
+
 **Input formats:** raw `curl -i` dumps, JSON observations, HAR exports (Burp, ZAP, browser DevTools).
 
-**Exit codes:** `0` no WAF detected · `1` nothing analyzable · `2` WAF likely present.
+**Exit codes:** `0` nothing detected · `1` nothing analyzable · `2` WAF likely present · `3` edge/CDN present, no WAF evidence.
 
 ## Detected
 
-Cloudflare · Akamai · Imperva/Incapsula · Sucuri · ModSecurity · F5 BIG-IP · AWS CloudFront/WAF · Fastly
+| Layer | Vendors |
+|---|---|
+| CDN | Cloudflare · Akamai · AWS CloudFront · Fastly |
+| WAF | Imperva/Incapsula · Sucuri · ModSecurity · F5 BIG-IP ASM · AWS WAF |
+| Bot management | Akamai Bot Manager |
 
 Every fingerprint is backed by a capture in [`tests/fixtures/`](tests/fixtures/) and asserted in CI. Coverage is deliberately narrow and verified rather than broad and untested — that ratio is the point, and it will change as the fingerprint database lands.
 
@@ -52,9 +59,10 @@ Every fingerprint is backed by a capture in [`tests/fixtures/`](tests/fixtures/)
 
 Headers, cookies and body markers are matched against the fingerprint database; matches accumulate into a per-vendor score.
 
-Two properties worth knowing, because most tools in this space have neither:
+Three properties worth knowing, because most tools in this space have none of them:
 
-- **Generic block pages need corroboration.** `request blocked` / `access denied` / `forbidden` count only when an independent vendor signal is also present. Alone they are indistinguishable from an ordinary origin returning 403, and counting them unconditionally false-positives on stock nginx and Apache error pages.
+- **Layers are separated.** CDN, WAF and bot management are distinct controls. A Fastly-cached host reports `cdn`, not `waf`, and exits 3 rather than 2.
+- **Generic block pages need corroboration.** `request blocked` / `access denied` / `forbidden` count only when a vendor has been *independently identified* — and a phrase that generic is never itself treated as vendor evidence, or it would corroborate itself.
 - **No single vendor can saturate the score.** Each vendor's contribution is capped, so a vendor matching four header signals does not automatically produce total confidence.
 
 ## Limits
@@ -79,7 +87,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Attribution and licensing
 
-Engine: MIT (see [LICENSE](LICENSE)). Fingerprint database: Apache-2.0, because it aggregates BSD-3-Clause, MIT and Apache-2.0 material and Apache-2.0 is the only one of the three that absorbs the others coherently.
+Engine: MIT (see [LICENSE](LICENSE)). Fingerprint database (`edgeprint/fingerprints.py`): Apache-2.0 (see [LICENSE-APACHE](LICENSE-APACHE)), because it aggregates BSD-3-Clause, MIT and Apache-2.0 material and Apache-2.0 is the only one of the three that absorbs the others coherently.
 
 Upstream projects and their attribution requirements are recorded in [NOTICE](NOTICE), including two deliberate exclusions: **WhatWaf** (GPL — cannot be relicensed into this compilation) and **JA4S** (FoxIO License 1.1 — not permissive for monetization).
 

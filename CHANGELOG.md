@@ -21,12 +21,45 @@ passive edge fingerprinting over already-captured traffic.
   to 1.0; a single vendor matching several signals reached the ceiling immediately.
   Each vendor's contribution is now capped.
 - **Incorrect fingerprints.** `visid_incap` was listed as a header (it is a cookie);
-  F5 cookies `ts01`/`ts02` never existed and are replaced with `BIGipServer`,
-  `MRHSession` and `LastMRH_Session`.
+  F5 `ts01`/`ts02` were arbitrary instances rather than real cookie patterns
+  (BIG-IP ASM does set `TS<hex>` cookies, but `ts` is too short to use as a name
+  prefix safely); replaced with `BIGipServer`, `MRHSession`, `LastMRH_Session`.
 - Reports named the wildcard pattern (`x-akamai*`) instead of the header actually
   matched.
 - Exit codes conflated "no WAF found" with "nothing analyzable"; a parsed response
   with no indicators now exits 0, and only an unusable observation exits 1.
+
+### Fixed in review
+
+Findings from the review of #5, all reproduced before fixing:
+
+- **The block-page corroboration gate could be bypassed.** `request blocked` was
+  listed as an Imperva and AWS body signal while also being a generic
+  BLOCK_PATTERN, so the phrase corroborated itself: a plain nginx origin serving
+  "Request Blocked" reached confidence 0.65 and exited 2. Corroboration now
+  requires a vendor above the naming threshold, and generic phrases are no longer
+  vendor signals.
+- **Repeated headers were overwritten.** Only the last `Set-Cookie` survived, so
+  the Imperva fixture's `incap_ses` cookie never matched and real Cloudflare
+  responses lost one of `__cf_bm` / `cf_clearance`. Repeats are now joined.
+- **The header/body boundary was guessed.** Blank lines were stripped and the
+  boundary inferred from the first colon-free line, so a body containing CSS or a
+  quoted header was parsed into the header map. The blank line per RFC 7230 is
+  now the delimiter.
+- **Cookie needles matched values, not names.** Short needles such as `_abck`
+  fired on any opaque session value containing them. Cookie names are now parsed
+  and matched as name prefixes.
+- **`x-waf` was scored twice**, by both the F5 fingerprint and the generic hint,
+  letting one header produce a verdict with no vendor named.
+- **CDN was reported as WAF.** Fastly and CloudFront caching headers produced
+  "WAF LIKELY PRESENT" and exit 2. Detection is now layered (`cdn` / `waf` /
+  `bot`) with per-layer confidence, `likely_waf` separate from `likely_edge`, and
+  a new exit code 3 for edge presence without WAF evidence.
+- **Indicator values were lowercased**, so reported evidence was not verbatim.
+- **Apache-2.0 was declared without shipping the license text.** `LICENSE-APACHE`
+  and an SPDX header on the fingerprint module now back the claim.
+- Tests ignored the manifest's `format` field; `cli.py` and `reporters.py` had no
+  coverage at all. Coverage is now 87% with CLI exit codes asserted per fixture.
 
 ### Added
 - Vendor coverage for AWS CloudFront/WAF and Fastly (8 vendors total).
@@ -51,7 +84,7 @@ passive edge fingerprinting over already-captured traffic.
 ## [0.1.0] - 2025-01-XX
 
 ### Added
-- Initial release of WAF Presence Checker (Offline)
+- Initial release of edgeprint (Offline)
 - Core analysis engine with heuristic-based WAF detection
 - Support for multiple input formats (raw headers, JSON, HAR)
 - CLI interface with `edgeprint` command
@@ -115,7 +148,7 @@ passive edge fingerprinting over already-captured traffic.
 
 ### v0.1.0 - Initial Public Release
 
-This is the first public release of WAF Presence Checker, an offline-only tool for analyzing HTTP responses to detect potential WAF/CDN presence.
+This is the first public release of edgeprint, an offline-only tool for analyzing HTTP responses to detect potential WAF/CDN presence.
 
 **Key Highlights:**
 - ✅ Completely offline operation

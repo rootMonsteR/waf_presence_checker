@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Server: gunicorn/21.2.0
+Content-Type: text/html
+Set-Cookie: sessionid=xx_abckyy_bm_svzz; Path=/; HttpOnly
+
+<html><body>ok</body></html>

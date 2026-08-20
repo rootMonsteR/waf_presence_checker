@@ -11,7 +11,7 @@ requires-python = ">=3.9"
 authors = [
   {name = "edgeprint contributors"}
 ]
-license = {text = "MIT"}
+license = {text = "MIT AND Apache-2.0"}
 keywords = ["waf", "firewall", "security", "headers", "forensics", "offline", "pentesting", "authorized-testing"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
     "Intended Audience :: Developers",
@@ -68,8 +69,6 @@ addopts = [
     "--verbose",
     "--cov=edgeprint",
     "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml"
 ]
 
 [tool.mypy]

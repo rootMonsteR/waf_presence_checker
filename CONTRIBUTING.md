@@ -1,6 +1,6 @@
-# Contributing to WAF Presence Checker
+# Contributing to edgeprint
 
-Thank you for your interest in contributing to the WAF Presence Checker project! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to the edgeprint project! This document provides guidelines and instructions for contributing.
 
 ## Table of Contents
 

@@ -1,12 +1,23 @@
+"""Output formatters for detection reports."""
+
 import json
 
 from .models import DetectionReport
 
 
+def _verdict(report: DetectionReport) -> str:
+    if report.likely_waf:
+        return "WAF LIKELY PRESENT"
+    if report.likely_edge:
+        return "EDGE/CDN PRESENT, NO WAF EVIDENCE"
+    return "NO EDGE PROTECTION DETECTED"
+
+
 def to_text(report: DetectionReport) -> str:
-    lines = []
-    verdict = "LIKELY PRESENT" if report.likely_waf else "UNLIKELY/INDETERMINATE"
-    lines.append(f"WAF Presence: {verdict} (confidence={report.confidence:.2f})")
+    lines = [f"Edge protection: {_verdict(report)} (confidence={report.confidence:.2f})"]
+    if report.layers:
+        by_conf = sorted(report.layers.items(), key=lambda kv: kv[1], reverse=True)
+        lines.append("Layers: " + ", ".join(f"{name}={conf:.2f}" for name, conf in by_conf))
     if report.vendor_guesses:
         lines.append("Possible vendors: " + ", ".join(report.vendor_guesses))
     if report.rationale:
@@ -22,7 +33,9 @@ def to_json(report: DetectionReport) -> str:
     return json.dumps(
         {
             "likely_waf": report.likely_waf,
+            "likely_edge": report.likely_edge,
             "confidence": report.confidence,
+            "layers": report.layers,
             "vendor_guesses": report.vendor_guesses,
             "rationale": report.rationale,
             "indicators": [

@@ -1,4 +1,4 @@
-"""Command-line interface for WAF Presence Checker.
+"""Command-line interface for edgeprint.
 
 This module provides the main CLI entry point for analyzing HTTP observations
 to detect potential WAF presence.
@@ -18,6 +18,7 @@ from .reporters import to_json, to_text
 EXIT_OK = 0
 EXIT_INDETERMINATE = 1
 EXIT_WAF_LIKELY = 2
+EXIT_EDGE_ONLY = 3
 
 # Configure logging
 logging.basicConfig(
@@ -54,7 +55,10 @@ def main(argv: Optional[list] = None) -> int:
     """
     ap = argparse.ArgumentParser(
         description="edgeprint - offline WAF/CDN edge fingerprinting (no network calls).",
-        epilog="Exit codes: 0=no WAF detected, 1=indeterminate/error, 2=WAF likely present",
+        epilog=(
+            "Exit codes: 0=nothing detected, 1=nothing analyzable, "
+            "2=WAF likely present, 3=edge/CDN present but no WAF evidence"
+        ),
     )
     sub = ap.add_subparsers(dest="cmd")
 
@@ -122,16 +126,20 @@ def main(argv: Optional[list] = None) -> int:
         else:
             print(to_text(report))
 
-        # Determine exit code. A confident negative (headers parsed, nothing
-        # found) is EXIT_OK; only an unusable observation is indeterminate.
+        # A confident negative (headers parsed, nothing found) is EXIT_OK; only
+        # an unusable observation is indeterminate. Edge presence without WAF
+        # evidence gets its own code, because a CDN is not a WAF.
         if report.likely_waf:
             logger.info(f"WAF detected with confidence {report.confidence}")
             return EXIT_WAF_LIKELY
+        if report.likely_edge:
+            logger.info(f"Edge product detected, no WAF evidence: {report.layers}")
+            return EXIT_EDGE_ONLY
         if not ob.headers:
             logger.info("No headers to analyze; result is indeterminate")
             return EXIT_INDETERMINATE
 
-        logger.info(f"Low confidence ({report.confidence}), no WAF detected")
+        logger.info(f"Low confidence ({report.confidence}), nothing detected")
         return EXIT_OK
 
     except ValueError as e:
