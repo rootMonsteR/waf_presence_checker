@@ -1,0 +1,54 @@
+{
+  "vendor": "Sucuri",
+  "layers": [
+    "waf"
+  ],
+  "references": [
+    "https://docs.sucuri.net/website-firewall/"
+  ],
+  "signals": [
+    {
+      "type": "header",
+      "key": "x-sucuri-id",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    },
+    {
+      "type": "header",
+      "key": "x-sucuri-cache",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    },
+    {
+      "type": "header",
+      "key": "server",
+      "contains": "sucuri",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "sucuri_cloudproxy_uuid",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    },
+    {
+      "type": "body",
+      "contains": "sucuri website firewall",
+      "weight": 0.15,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    },
+    {
+      "type": "body",
+      "contains": "access denied - sucuri",
+      "weight": 0.15,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+    }
+  ]
+}

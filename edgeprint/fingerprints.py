@@ -1,19 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The fingerprint database is licensed Apache-2.0 rather than MIT (which covers
-# the rest of edgeprint), because it is a compilation that aggregates material
-# under BSD-3-Clause, MIT and Apache-2.0 terms. Apache-2.0 absorbs all three
-# coherently; MIT cannot relabel Apache-2.0 material. See LICENSE-APACHE and NOTICE.
+# the rest of edgeprint), because it aggregates material under BSD-3-Clause, MIT
+# and Apache-2.0 terms. Apache-2.0 absorbs all three coherently; MIT cannot
+# relabel Apache-2.0 material. See LICENSE-APACHE and NOTICE.
 """Loader for the WAF / CDN / edge-protection fingerprint database.
 
-The database is authored as YAML in ``fingerprints/`` — one file per vendor, with
-comments and per-signal provenance — and compiled by ``tools/build_fingerprints.py``
-into ``edgeprint/data/fingerprints.json``, which is what ships and what this module
-reads. The split keeps the runtime free of dependencies while leaving contributors
-a format worth reviewing; CI fails if the two drift apart.
+The database is plain JSON under ``edgeprint/data/fingerprints/`` — one file per
+vendor, hand-edited, no build step. Files are read directly at import, so what you
+review is what ships and drift between source and artifact is impossible.
 
-The JSON is deliberately plain and language-neutral so other tools can consume the
-database without depending on this package.
+Per-vendor files rather than one large file: fingerprint changes arrive as small
+reviewable diffs and rarely conflict. JSON rather than YAML: the runtime keeps
+zero dependencies, and a ``notes`` field carries what comments would have.
+
+The format is language-neutral by design, so other tools can consume the database
+without depending on this package. See ``docs/FINGERPRINT_SCHEMA.md``.
 """
 
 import json
@@ -24,40 +26,72 @@ try:  # Python 3.9+
 except ImportError:  # pragma: no cover - unreachable on supported versions
     _resource_files = None  # type: ignore[assignment]
 
-_DATA_FILE = "fingerprints.json"
+SCHEMA_VERSION: int = 1
+
+WEIGHT_DEFAULTS = {"header": 0.25, "cookie": 0.20, "body": 0.15}
 
 
-def _load() -> dict:
+def _source_dir() -> Any:
     if _resource_files is not None:
-        path = _resource_files("edgeprint").joinpath("data").joinpath(_DATA_FILE)
-        data: dict = json.loads(path.read_text(encoding="utf-8"))
-        return data
+        return _resource_files("edgeprint").joinpath("data").joinpath("fingerprints")
     import pathlib  # pragma: no cover
 
-    here = pathlib.Path(__file__).parent / "data" / _DATA_FILE  # pragma: no cover
-    return json.loads(here.read_text(encoding="utf-8"))  # pragma: no cover
+    return pathlib.Path(__file__).parent / "data" / "fingerprints"  # pragma: no cover
 
 
-_DB: dict = _load()
+def load_vendor_files() -> list[dict[str, Any]]:
+    """Read every vendor file, newest schema shape, sorted by vendor name."""
+    vendors = []
+    for entry in sorted(_source_dir().iterdir(), key=lambda p: p.name):
+        if not entry.name.endswith(".json"):
+            continue
+        data: dict[str, Any] = json.loads(entry.read_text(encoding="utf-8"))
+        data["_file"] = entry.name
+        vendors.append(data)
+    return sorted(vendors, key=lambda d: d.get("vendor", ""))
 
-SCHEMA_VERSION: int = _DB["schema_version"]
+
+def _compile(vendors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Flatten vendor files into the shape the analyzer matches against."""
+    out = []
+    for v in vendors:
+        entry: dict[str, Any] = {
+            "vendor": v["vendor"],
+            "layers": list(v.get("layers", ["cdn"])),
+            "signal_layers": {},
+            "header_contains": [],
+            "cookie_contains": [],
+            "body_contains": [],
+            "weights": {},
+        }
+        for sig in v.get("signals", []):
+            stype = sig.get("type")
+            weight = sig.get("weight", WEIGHT_DEFAULTS.get(stype))
+            if stype == "header":
+                key = sig["key"]
+                entry["header_contains"].append((key, sig.get("contains", "") or ""))
+                target = key
+            elif stype == "cookie":
+                target = sig["name_prefix"]
+                entry["cookie_contains"].append(target)
+            elif stype == "body":
+                target = sig["contains"]
+                entry["body_contains"].append(target)
+            else:
+                continue
+            if sig.get("layer"):
+                entry["signal_layers"][target] = sig["layer"]
+            if weight is not None:
+                entry["weights"][f"{stype}:{target}"] = weight
+        out.append(entry)
+    return out
+
 
 #: Vendor fingerprints in the shape the analyzer consumes. Not exhaustive and not
 #: vendor-endorsed. Header keys ending in ``*`` are prefix matches; a ``contains``
 #: of ``""`` matches on header presence alone. Cookie entries are matched against
 #: parsed cookie *names*, never values.
-FINGERPRINTS: list[dict[str, Any]] = [
-    {
-        "vendor": v["vendor"],
-        "layers": v["layers"],
-        "signal_layers": v.get("signal_layers", {}),
-        "header_contains": [tuple(pair) for pair in v.get("header_contains", [])],
-        "cookie_contains": v.get("cookie_contains", []),
-        "body_contains": v.get("body_contains", []),
-        "weights": v.get("weights", {}),
-    }
-    for v in _DB["vendors"]
-]
+FINGERPRINTS: list[dict[str, Any]] = _compile(load_vendor_files())
 
 
 def vendor_count() -> int:

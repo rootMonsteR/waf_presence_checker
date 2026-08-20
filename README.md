@@ -74,27 +74,26 @@ Confidence scores are currently **hand-assigned, not measured**. Treat `0.70` as
 ## Roadmap
 
 1. ~~Credibility: verified fixtures, CI, honest scope~~ ✅
-2. ~~**Fingerprint database** — versioned YAML with per-signal provenance, compiled to language-neutral JSON~~ ✅ *(aggregation from upstream databases still to come)*
+2. ~~**Fingerprint database** — per-vendor files with per-signal weights, layers and provenance, in a language-neutral format~~ ✅ *(aggregation from upstream databases still to come)*
 3. **WAF lab** — Docker stack running real WAFs (ModSecurity, Coraza, SafeLine, BunkerWeb…) to generate ground truth with *known* labels rather than inferred ones
 4. **Benchmark** — the first published precision/recall figures for WAF detection, scoring edgeprint against wafw00f, wafme0w and identYwaf on a labelled corpus. Existing WAF benchmarks measure whether a WAF blocks attacks; none measure whether detection tools are correct
 5. **Calibrated engine** — replace hand-assigned weights with likelihood ratios measured from lab and corpus data
 
 ## The fingerprint database
 
-Fingerprints live in [`fingerprints/`](fingerprints/) as one YAML file per vendor, with per-signal weights, layer tags, provenance and a required `verified_against` fixture. [`tools/build_fingerprints.py`](tools/build_fingerprints.py) compiles them to `edgeprint/data/fingerprints.json`, which is what the engine loads — so the runtime keeps **zero dependencies** while contributors get a reviewable format. CI fails if the two drift.
+Fingerprints live in [`edgeprint/data/fingerprints/`](edgeprint/data/fingerprints/) as one plain JSON file per vendor, each signal carrying a weight, layer tag, provenance `source` and a required `verified_against` fixture path.
 
-The compiled JSON is deliberately plain and language-neutral: other tools can consume the database without depending on this package.
+No build step and no compiled artifact: the files are read directly at import, so what you review is what ships. JSON rather than YAML keeps the runtime at **zero dependencies**, and a `notes` field carries what comments would have. The format is language-neutral by design — other tools can consume the database without depending on this package.
 
-The build step is also a validator, and it enforces the rules that past bugs came from — it rejects generic block phrases as vendor signals, cookie prefixes short enough to hit opaque session values, and any signal without an existing fixture. See [`fingerprints/SCHEMA.md`](fingerprints/SCHEMA.md).
+Validation runs as part of the test suite rather than a separate build command, so `pytest` alone rejects the mistakes past bugs came from: generic block phrases used as vendor signals, cookie prefixes short enough to match opaque session values, and any signal without an existing fixture. See [`docs/FINGERPRINT_SCHEMA.md`](docs/FINGERPRINT_SCHEMA.md).
 
 ```bash
-python tools/build_fingerprints.py           # recompile after editing YAML
-python tools/build_fingerprints.py --check   # what CI runs
+./check.sh   # tests, types, lint, format — everything CI would run
 ```
 
 ## Contributing
 
-New fingerprints are welcome and must arrive with a capture: add the response to `tests/fixtures/`, a row to `tests/fixtures/manifest.json`, and a signal to the vendor's YAML. The test suite is generated from the manifest, so there is no test code to write. Fingerprints without a fixture will not be merged — that rule is what keeps the database honest.
+New fingerprints are welcome and must arrive with a capture: add the response to `tests/fixtures/`, a row to `tests/fixtures/manifest.json`, and a signal to the vendor's JSON file. The test suite is generated from the manifest, so there is no test code to write. Fingerprints without a fixture will not be merged — that rule is what keeps the database honest.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 

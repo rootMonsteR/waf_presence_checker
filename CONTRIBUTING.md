@@ -154,29 +154,32 @@ When adding new WAF fingerprints, follow these guidelines:
 
 ### Fingerprint Structure
 
-Add fingerprints to `fingerprints/<vendor>.yaml`, then recompile with
-`python tools/build_fingerprints.py`. Do not edit `edgeprint/data/fingerprints.json`
-by hand — it is generated, and CI checks it matches the YAML.
+Add fingerprints to `edgeprint/data/fingerprints/<vendor>.json`. There is no build
+step — the files are read directly, so what you edit is what ships.
 
-```yaml
-vendor: VendorName WAF
-layers: [waf]              # what a match proves: cdn | waf | bot | ddos
-references:
-  - https://vendor.example/docs/response-headers
-
-signals:
-  - type: header
-    key: "x-vendor*"       # trailing * is a prefix match
-    contains: ""           # "" matches on presence alone
-    weight: 0.25
-    source: edgeprint
-    verified_against: tests/fixtures/positive/vendor_200.txt
-
-  - type: cookie
-    name_prefix: "vendor_session"   # matched against cookie NAMES, never values
-    weight: 0.20
-    source: edgeprint
-    verified_against: tests/fixtures/positive/vendor_200.txt
+```json
+{
+  "vendor": "VendorName WAF",
+  "layers": ["waf"],
+  "references": ["https://vendor.example/docs/response-headers"],
+  "signals": [
+    {
+      "type": "header",
+      "key": "x-vendor*",
+      "contains": "",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/vendor_200.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "vendor_session",
+      "weight": 0.20,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/vendor_200.txt"
+    }
+  ]
+}
 ```
 
 Use a `*` suffix whenever the real header name carries a suffix. Exact-key matching
@@ -196,8 +199,8 @@ had never matched a real response, including an Akamai entry that could not fire
     "expect_waf": true, "expect_vendor": "VendorName WAF"}
    ```
 
-3. Run `pytest` — the suite is generated from the manifest, so your case is picked
-   up automatically. No test code to write.
+3. Run `./check.sh` — the suite is generated from the manifest and validates every
+   fingerprint, so your case is picked up automatically. No test code to write.
 
 Set `label_source` honestly: `synthetic` for hand-built from documentation, `lab` for
 a WAF you stood up yourself, `cname` or `cidr` for a live host labelled by DNS or

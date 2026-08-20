@@ -8,26 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - 2026-08-20
 
 ### Added
-- **Fingerprint database extracted from code into data.** Fingerprints now live in
-  `fingerprints/*.yaml`, one file per vendor, carrying per-signal weights, layer
-  tags, provenance (`source`) and a required `verified_against` fixture path.
-- `tools/build_fingerprints.py` compiles the YAML to `edgeprint/data/fingerprints.json`,
-  which is what the engine loads. The runtime keeps zero dependencies (PyYAML is a
-  dev dependency only) while contributors get a format with comments. `--check`
-  fails if the compiled output is stale, and CI runs it.
-- The build step doubles as a validator enforcing the rules that previous bugs came
-  from: generic block phrases are rejected as vendor signals, cookie prefixes under
-  three characters are rejected, and every signal must name a fixture that exists.
-- `fingerprints/SCHEMA.md` documents the format and the reasoning behind each rule.
+- **Fingerprint database extracted from code into data.** Fingerprints live in
+  `edgeprint/data/fingerprints/`, one plain JSON file per vendor, each signal
+  carrying a weight, layer tag, provenance (`source`) and a required
+  `verified_against` fixture path.
+- Database validation runs in the test suite (`tests/test_fingerprints.py`), so
+  `pytest` alone rejects the mistakes past bugs came from: generic block phrases
+  used as vendor signals, cookie prefixes short enough to match opaque session
+  values, and any signal without an existing fixture.
+- `check.sh` runs tests, types, lint and format in one command, for working
+  without CI.
+- `docs/FINGERPRINT_SCHEMA.md` documents the format and the reasoning per rule.
 - Per-signal weights are read from the database with type defaults as fallback, so
   replacing hand-assigned weights with measured likelihood ratios becomes a data
   change rather than a code change.
 
 ### Changed
-- `edgeprint/fingerprints.py` is now a loader rather than the database itself; it
-  exposes `FINGERPRINTS`, `SCHEMA_VERSION`, `vendor_count()` and `signal_count()`.
-- The compiled JSON ships in the wheel and is language-neutral, so other tools can
-  consume the database without depending on this package.
+- `edgeprint/fingerprints.py` is now a loader rather than the database itself;
+  it exposes `FINGERPRINTS`, `SCHEMA_VERSION`, `load_vendor_files()`,
+  `vendor_count()` and `signal_count()`.
+- The database format is plain and language-neutral, and ships in the wheel, so
+  other tools can consume it without depending on this package.
+
+### Notes
+- An earlier draft of this change authored the database as YAML and compiled it to
+  JSON. The split bought inline comments at the cost of a build step, a dev
+  dependency, a CI drift check and a class of source/artifact drift bugs — not a
+  good trade at this size. JSON with a `notes` field carries the same information.
+  Revisit if hand-authoring grows painful at scale.
 
 ## [0.2.0] - 2026-08-19
 
