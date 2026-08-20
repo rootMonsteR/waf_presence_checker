@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "license": "Apache-2.0",
   "vendor": "ModSecurity (various vendors)",
   "layers": [
     "waf"
@@ -12,7 +14,7 @@
       "key": "x-modsecurity*",
       "weight": 0.25,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/modsecurity_403.txt"
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
     },
     {
       "type": "header",
@@ -20,7 +22,7 @@
       "contains": "mod_security",
       "weight": 0.25,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/modsecurity_403.txt"
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
     },
     {
       "type": "header",
@@ -42,7 +44,7 @@
       "contains": "modsecurity",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/modsecurity_403.txt"
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
     }
   ]
 }

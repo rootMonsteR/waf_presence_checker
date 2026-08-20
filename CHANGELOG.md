@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2026-08-20
 
+### Fixed in review (second pass)
+
+- **The HAR fixture was excluded by `.gitignore` (`*.har`) and never committed**, so
+  the suite passed in the author's working tree and failed on a clean checkout with
+  4 errors. Test fixtures are captures, not build artifacts, and are now exempt.
+- **`verified_against` did not verify.** It asserted only that the named file
+  existed, so 31 of 60 signals cited a capture they did not match — the dead
+  fingerprint defect the rule exists to prevent. Signals are now replayed through
+  the analyzer's own matchers, and block/challenge-page captures were added for
+  every vendor that needed one.
+- **Header case split repeated fields.** `_add_header` keyed on the raw name, so
+  `Set-Cookie` and `set-cookie` became separate entries that normalisation later
+  collapsed, reintroducing the overwrite it was written to prevent. HAR exports
+  and proxy logs do not normalise case.
+- **Body signals ignored their database weight** and never registered for layer
+  promotion, so a body signal's `layer` override could not work.
+- **Wildcard header signals lost their layer override**, because the observed
+  header name was recorded where the fingerprint pattern was expected.
+- **Overlapping block patterns each scored.** One page saying "request blocked",
+  "access denied" and "forbidden" counted three times, letting generic phrasing
+  outweigh real vendor evidence. The strongest match now scores once.
+- **Verdicts thresholded display-rounded values**, so 0.596 rounded to 0.60 and
+  crossed the bar. Thresholds use unrounded values; rounding is presentation only.
+- **Confidence summed vendors below the naming threshold**, producing verdicts with
+  an empty vendor list. Only named vendors contribute.
+- `parse_json_obs` did not validate `body_excerpt`'s type, crashing on untrusted
+  JSON. The 4096-byte cap was duplicated across three parsers and is now one
+  constant.
+- The Apache-2.0 SPDX marker stayed on the loader after the data moved; the data
+  files now declare their own license and schema version, and the loader is marked
+  MIT like the rest of the package.
+
 ### Added
 - **Fingerprint database extracted from code into data.** Fingerprints live in
   `edgeprint/data/fingerprints/`, one plain JSON file per vendor, each signal

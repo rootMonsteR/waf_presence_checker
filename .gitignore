@@ -152,3 +152,8 @@ temp/
 
 # Ruff
 .ruff_cache/
+
+# Test fixtures are captures, not generated artifacts. The *.har rule above would
+# otherwise silently exclude HAR fixtures, which made the suite pass locally and
+# fail on a clean checkout.
+!tests/fixtures/**

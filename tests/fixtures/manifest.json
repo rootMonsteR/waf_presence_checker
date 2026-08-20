@@ -183,6 +183,96 @@
       "expect_layers": [],
       "expect_exit": 0,
       "regression": "Short cookie needles such as _abck matched inside opaque session values."
+    },
+    {
+      "file": "positive/cloudflare_challenge_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn",
+        "waf"
+      ],
+      "expect_vendor": "Cloudflare (edge firewall/CDN)",
+      "expect_exit": 2,
+      "notes": "Challenge page: cf-mitigated promotes Cloudflare to the waf layer."
+    },
+    {
+      "file": "positive/akamai_blocked_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "bot",
+        "cdn"
+      ],
+      "expect_vendor": "Akamai (edge)",
+      "expect_exit": 3,
+      "notes": "Block page carrying Bot Manager cookies."
+    },
+    {
+      "file": "positive/imperva_blocked_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "Imperva/Incapsula",
+      "expect_exit": 2,
+      "notes": "Incapsula incident page."
+    },
+    {
+      "file": "positive/sucuri_blocked_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "Sucuri",
+      "expect_exit": 2,
+      "notes": "Sucuri firewall block page."
+    },
+    {
+      "file": "positive/f5_blocked_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "F5 (BIG-IP ASM/Advanced WAF)",
+      "expect_exit": 2,
+      "notes": "ASM rejection page with support ID."
+    },
+    {
+      "file": "positive/modsecurity_406.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "waf"
+      ],
+      "expect_vendor": "ModSecurity (various vendors)",
+      "expect_exit": 2,
+      "notes": "406 variant exercising x-modsecurity-* and x-powered-by."
+    },
+    {
+      "file": "positive/fastly_error_503.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn"
+      ],
+      "expect_vendor": "Fastly",
+      "expect_exit": 3,
+      "notes": "Fastly error page."
+    },
+    {
+      "file": "positive/cloudfront_error_403.txt",
+      "format": "raw",
+      "label_source": "synthetic",
+      "expect_layers": [
+        "cdn"
+      ],
+      "expect_vendor": "AWS CloudFront (CDN)",
+      "expect_exit": 3,
+      "notes": "CloudFront error page."
     }
   ]
 }

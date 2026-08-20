@@ -62,9 +62,14 @@ happened and is regression-tested.
 **Cookies match names.** `name_prefix` is compared against parsed cookie names.
 Never write a needle short enough to appear inside an opaque session value.
 
-**Every signal needs a fixture.** `verified_against` must point at a capture in
-`tests/fixtures/`. A signal that has never matched a real response is how a dead
-Akamai fingerprint shipped for months.
+**Every signal needs a fixture it actually matches.** `verified_against` names a
+capture in `tests/fixtures/`, and the test suite replays the signal against it
+through the same matchers the analyzer uses. Merely pointing at an existing file
+is not enough — an earlier version of this rule checked only that the path
+existed, and 31 of 60 signals cited a capture they did not match.
+
+Block-page and challenge-page signals belong with a block-page capture; most
+vendors therefore have both a normal-response fixture and a blocked one.
 
 All of these rules are enforced by `tests/test_fingerprints.py`, so `pytest`
 rejects a bad fingerprint without needing CI.

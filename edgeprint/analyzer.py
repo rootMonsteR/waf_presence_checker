@@ -183,7 +183,10 @@ def analyze(ob: HttpObservation) -> DetectionReport:
                     )
                 )
                 vote += _weight(fp, "header", k, WEIGHT_HEADER)
-                matched_signals.append(matched)
+                # Record the fingerprint key, not the observed name: signal_layers
+                # is keyed by pattern, so a wildcard signal's layer override would
+                # otherwise never resolve.
+                matched_signals.append(k)
 
         for needle, name in _cookie_hits(cookie_names, fp.get("cookie_contains", [])):
             w = _weight(fp, "cookie", needle, WEIGHT_COOKIE)
@@ -227,6 +230,10 @@ def analyze(ob: HttpObservation) -> DetectionReport:
             generic_weight += w
 
     corroborated = bool(vendor_votes) or generic_weight > 0.0
+    # The block patterns overlap - one page routinely says "request blocked",
+    # "access denied" and "forbidden" - and they describe the same single fact.
+    # Summing them let generic phrasing outweigh the actual vendor evidence, so
+    # only the strongest match scores.
     block_weight = 0.0
     for src, pat, w, note in BLOCK_PATTERNS:
         found = pat.search(ob.body_excerpt or "")
@@ -235,29 +242,33 @@ def analyze(ob: HttpObservation) -> DetectionReport:
                 logger.debug("Ignoring uncorroborated block pattern: %s", pat.pattern)
                 continue
             indicators.append(Indicator(src, "pattern", found.group(0), w, note))
-            block_weight += w
+            block_weight = max(block_weight, w)
 
     # Confidence: cap each vendor's contribution so one vendor matching many
-    # signals cannot saturate the score on its own.
-    confidence = sum(min(w, VENDOR_WEIGHT_CAP) for w in vendor_weight.values())
+    # signals cannot saturate the score on its own. Only vendors above the naming
+    # threshold count - otherwise two unrelated vendors at 0.35 apiece produce a
+    # verdict with an empty vendor list and nothing to justify it.
+    confidence = sum(vendor_votes.values())
     confidence += generic_weight + block_weight
     confidence = max(0.0, min(confidence, 1.0))
 
     # Per-layer confidence. A CDN is not a WAF: reporting Fastly or CloudFront
     # as "WAF present" overstates what the response actually showed.
     layers: dict[str, float] = {}
-    for vendor, weight in vendor_weight.items():
+    for vendor, weight in vendor_votes.items():
         for layer in vendor_layers.get(vendor, []):
-            layers[layer] = min(1.0, layers.get(layer, 0.0) + min(weight, VENDOR_WEIGHT_CAP))
+            layers[layer] = min(1.0, layers.get(layer, 0.0) + weight)
     if generic_weight or block_weight:
         layers["waf"] = min(1.0, layers.get("waf", 0.0) + generic_weight + block_weight)
-    layers = {k: round(v, 2) for k, v in layers.items()}
 
+    # Threshold on the unrounded values; rounding is presentation only. Comparing
+    # a rounded score against the threshold let 0.596 display as 0.60 and cross it.
     waf_confidence = layers.get("waf", 0.0)
     likely_waf = waf_confidence >= 0.6 or (
         waf_confidence >= 0.45 and any("waf" in vendor_layers.get(v, []) for v in vendor_votes)
     )
     likely_edge = confidence >= 0.6 or (confidence >= 0.45 and bool(vendor_votes))
+    layers = {k: round(v, 2) for k, v in layers.items()}
 
     reasons = []
     if vendor_votes:

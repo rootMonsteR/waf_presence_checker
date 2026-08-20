@@ -1,0 +1,8 @@
+HTTP/1.1 403 Forbidden
+Server: BigIP
+X-ASM-Block-Id: 1234567890
+Set-Cookie: f5avr1234567890aaaaaaaaaa=ABCDEF; path=/
+Set-Cookie: MRHSession=1a2b3c4d5e; path=/
+Set-Cookie: LastMRH_Session=1a2b3c4d5e; path=/
+
+<html><body>The requested URL was rejected. Please consult with your administrator.<br>Your support ID is: 1234567890123456789</body></html>

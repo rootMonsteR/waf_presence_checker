@@ -10,6 +10,11 @@ from typing import Any
 
 from .models import HttpObservation
 
+#: Maximum body bytes retained for analysis. Bodies are only ever pattern-matched,
+#: so a bounded excerpt is enough, and the bound must be identical across parsers
+#: or body-signal detection becomes format-dependent.
+MAX_BODY_EXCERPT = 4096
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,12 +26,17 @@ def _add_header(headers: dict, key: str, value: str) -> None:
     discarding cookie signals. ``Set-Cookie`` is joined with newlines because a
     comma is ambiguous inside cookie ``Expires`` dates; other fields use the
     comma form from RFC 7230 section 3.2.2.
+
+    Matching is case-insensitive: HAR exports and proxy logs do not normalise
+    header case, so ``Set-Cookie`` and ``set-cookie`` must land in one entry or
+    the overwrite this function prevents simply reappears downstream.
     """
-    if key in headers:
-        sep = "\n" if key.lower() == "set-cookie" else ", "
-        headers[key] = headers[key] + sep + value
-    else:
-        headers[key] = value
+    for existing in headers:
+        if existing.lower() == key.lower():
+            sep = "\n" if key.lower() == "set-cookie" else ", "
+            headers[existing] = headers[existing] + sep + value
+            return
+    headers[key] = value
 
 
 def parse_raw_headers(text: str) -> HttpObservation:
@@ -92,7 +102,7 @@ def parse_raw_headers(text: str) -> HttpObservation:
         method="GET",
         status_code=status_code,
         headers=headers,
-        body_excerpt=body_excerpt[:4096] if body_excerpt else None,
+        body_excerpt=body_excerpt[:MAX_BODY_EXCERPT] if body_excerpt else None,
     )
 
 
@@ -130,8 +140,11 @@ def parse_json_obs(text: str) -> HttpObservation:
         headers = {}
 
     body_excerpt = data.get("body_excerpt")
-    if body_excerpt and len(body_excerpt) > 4096:
-        body_excerpt = body_excerpt[:4096]
+    if body_excerpt is not None and not isinstance(body_excerpt, str):
+        logger.warning("body_excerpt is not a string, ignoring")
+        body_excerpt = None
+    if body_excerpt and len(body_excerpt) > MAX_BODY_EXCERPT:
+        body_excerpt = body_excerpt[:MAX_BODY_EXCERPT]
 
     logger.debug(f"Parsed JSON observation: status={status_code}, headers={len(headers)}")
     return HttpObservation(
@@ -192,7 +205,7 @@ def parse_har(text: str) -> HttpObservation:
     body_excerpt = None
     content = res.get("content", {})
     if isinstance(content, dict) and content.get("text"):
-        body_excerpt = content["text"][:4096]  # Limit to 4KB
+        body_excerpt = content["text"][:MAX_BODY_EXCERPT]
 
     url = entry.get("request", {}).get("url", "")
     method = entry.get("request", {}).get("method", "GET")

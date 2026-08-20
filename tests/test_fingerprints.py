@@ -13,7 +13,18 @@ import pathlib
 
 import pytest
 
-from edgeprint.fingerprints import FINGERPRINTS, WEIGHT_DEFAULTS, load_vendor_files
+from edgeprint.analyzer import _cookie_hits, _cookie_names, _header_match, _norm_headers
+from edgeprint.fingerprints import (
+    FINGERPRINTS,
+    SCHEMA_VERSION,
+    WEIGHT_DEFAULTS,
+    load_vendor_files,
+    signal_count,
+    vendor_count,
+)
+from edgeprint.parsers import parse_har, parse_json_obs, parse_raw_headers
+
+PARSERS = {".txt": parse_raw_headers, ".json": parse_json_obs, ".har": parse_har}
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -75,12 +86,35 @@ def test_signal_is_well_formed(vendor, index, signal):
 
 
 @pytest.mark.parametrize("vendor,index,signal", SIGNALS, ids=SIGNAL_IDS)
-def test_every_signal_names_an_existing_fixture(vendor, index, signal):
-    """A signal that never matched a real response is how a dead Akamai fingerprint shipped."""
+def test_every_signal_matches_its_declared_fixture(vendor, index, signal):
+    """`verified_against` must be replayed, not merely present.
+
+    An earlier version of this test only asserted the file existed, which let 31
+    of 60 signals name a capture they did not match — the dead-fingerprint defect
+    this rule exists to prevent, still shippable. The signal is now replayed
+    through the same matchers the analyzer uses.
+    """
     where = f"{vendor['_file']} signal[{index}]"
     path = signal.get("verified_against")
     assert path, f"{where}: missing 'verified_against'; every signal needs a fixture"
-    assert (ROOT / path).exists(), f"{where}: fixture {path} does not exist"
+    fixture = ROOT / path
+    assert fixture.exists(), f"{where}: fixture {path} does not exist"
+
+    observation = PARSERS[fixture.suffix](fixture.read_text(encoding="utf-8"))
+    norm, _raw = _norm_headers(observation.headers)
+    kind = signal["type"]
+
+    if kind == "header":
+        matched = _header_match(norm, signal["key"], (signal.get("contains") or "").lower())
+        assert matched is not None, f"{where}: header {signal['key']!r} does not match {path}"
+    elif kind == "cookie":
+        hits = _cookie_hits(_cookie_names(norm), [signal["name_prefix"]])
+        assert hits, f"{where}: cookie {signal['name_prefix']!r} does not match {path}"
+    else:
+        body = (observation.body_excerpt or "").lower()
+        assert (
+            signal["contains"].lower() in body
+        ), f"{where}: body {signal['contains']!r} does not match {path}"
 
 
 @pytest.mark.parametrize("vendor,index,signal", BODY_SIGNALS, ids=BODY_IDS)
@@ -134,3 +168,18 @@ def test_compiled_view_matches_source_files():
             + len(compiled["body_contains"])
         )
         assert actual == expected, f"{src['vendor']}: {expected} signals, {actual} compiled"
+
+
+@pytest.mark.parametrize("vendor", VENDORS, ids=VENDOR_IDS)
+def test_vendor_file_declares_schema_and_license(vendor):
+    """Terms and format version travel with the data, which is vendored on its own."""
+    assert vendor.get("schema_version") == SCHEMA_VERSION, (
+        f"{vendor['_file']}: schema_version {vendor.get('schema_version')!r} "
+        f"does not match loader version {SCHEMA_VERSION}"
+    )
+    assert vendor.get("license") == "Apache-2.0", f"{vendor['_file']}: missing Apache-2.0 marker"
+
+
+def test_counts_match_loaded_database():
+    assert vendor_count() == len(VENDORS)
+    assert signal_count() == sum(len(v["signals"]) for v in VENDORS)

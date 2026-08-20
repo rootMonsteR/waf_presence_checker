@@ -11,4 +11,4 @@ it and makes no requests of its own; that does not make the capture itself lawfu
 __all__ = ["analyzer", "parsers", "reporters", "fingerprints", "models"]
 __version__ = "0.3.0"
 __author__ = "edgeprint contributors"
-__license__ = "MIT"
+__license__ = "MIT AND Apache-2.0"  # engine MIT; fingerprint database Apache-2.0

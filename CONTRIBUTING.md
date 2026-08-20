@@ -195,12 +195,23 @@ had never matched a real response, including an Akamai entry that could not fire
 2. Add a row to `tests/fixtures/manifest.json`:
 
    ```json
-   {"file": "positive/vendor_200.txt", "format": "raw", "label_source": "synthetic",
-    "expect_waf": true, "expect_vendor": "VendorName WAF"}
+   {
+     "file": "positive/vendor_200.txt",
+     "format": "raw",
+     "label_source": "synthetic",
+     "expect_layers": ["waf"],
+     "expect_vendor": "VendorName WAF",
+     "expect_exit": 2
+   }
    ```
 
 3. Run `./check.sh` — the suite is generated from the manifest and validates every
    fingerprint, so your case is picked up automatically. No test code to write.
+
+All of `expect_layers` and `expect_exit` are required — the suite reads them at
+import time, so a row missing either aborts collection of the whole module.
+`expect_exit` is 2 when a `waf` layer is expected, 3 for edge without WAF, 0 for
+negatives.
 
 Set `label_source` honestly: `synthetic` for hand-built from documentation, `lab` for
 a WAF you stood up yourself, `cname` or `cidr` for a live host labelled by DNS or

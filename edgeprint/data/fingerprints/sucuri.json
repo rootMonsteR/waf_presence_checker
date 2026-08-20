@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "license": "Apache-2.0",
   "vendor": "Sucuri",
   "layers": [
     "waf"
@@ -34,21 +36,21 @@
       "name_prefix": "sucuri_cloudproxy_uuid",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+      "verified_against": "tests/fixtures/positive/sucuri_blocked_403.txt"
     },
     {
       "type": "body",
       "contains": "sucuri website firewall",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+      "verified_against": "tests/fixtures/positive/sucuri_blocked_403.txt"
     },
     {
       "type": "body",
       "contains": "access denied - sucuri",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/sucuri_200.txt"
+      "verified_against": "tests/fixtures/positive/sucuri_blocked_403.txt"
     }
   ]
 }

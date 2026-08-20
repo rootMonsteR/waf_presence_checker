@@ -23,7 +23,6 @@ PARSERS = {"raw": parse_raw_headers, "json": parse_json_obs, "har": parse_har}
 
 POSITIVE = [c for c in CASES if c["expect_layers"]]
 NEGATIVE = [c for c in CASES if not c["expect_layers"]]
-IDS = {id(c): c["file"] for c in CASES}
 
 
 def _analyze(case):

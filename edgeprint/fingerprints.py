@@ -1,9 +1,11 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 #
-# The fingerprint database is licensed Apache-2.0 rather than MIT (which covers
-# the rest of edgeprint), because it aggregates material under BSD-3-Clause, MIT
-# and Apache-2.0 terms. Apache-2.0 absorbs all three coherently; MIT cannot
-# relabel Apache-2.0 material. See LICENSE-APACHE and NOTICE.
+# This module is loader code and is MIT like the rest of the package. The data it
+# loads is not: edgeprint/data/fingerprints/*.json is Apache-2.0, because that
+# compilation aggregates BSD-3-Clause, MIT and Apache-2.0 material and only
+# Apache-2.0 absorbs all three coherently. Each data file declares its own
+# license so the terms travel with the data when it is vendored on its own.
+# See edgeprint/data/fingerprints/NOTICE.md, LICENSE-APACHE and NOTICE.
 """Loader for the WAF / CDN / edge-protection fingerprint database.
 
 The database is plain JSON under ``edgeprint/data/fingerprints/`` — one file per
@@ -19,30 +21,24 @@ without depending on this package. See ``docs/FINGERPRINT_SCHEMA.md``.
 """
 
 import json
+from importlib.resources import files as _resource_files
 from typing import Any
 
-try:  # Python 3.9+
-    from importlib.resources import files as _resource_files
-except ImportError:  # pragma: no cover - unreachable on supported versions
-    _resource_files = None  # type: ignore[assignment]
-
+#: Format version of the vendor files. Each file declares its own; a mismatch
+#: means the database and this loader disagree about the schema.
 SCHEMA_VERSION: int = 1
 
 WEIGHT_DEFAULTS = {"header": 0.25, "cookie": 0.20, "body": 0.15}
 
 
 def _source_dir() -> Any:
-    if _resource_files is not None:
-        return _resource_files("edgeprint").joinpath("data").joinpath("fingerprints")
-    import pathlib  # pragma: no cover
-
-    return pathlib.Path(__file__).parent / "data" / "fingerprints"  # pragma: no cover
+    return _resource_files("edgeprint").joinpath("data").joinpath("fingerprints")
 
 
 def load_vendor_files() -> list[dict[str, Any]]:
     """Read every vendor file, newest schema shape, sorted by vendor name."""
     vendors = []
-    for entry in sorted(_source_dir().iterdir(), key=lambda p: p.name):
+    for entry in _source_dir().iterdir():
         if not entry.name.endswith(".json"):
             continue
         data: dict[str, Any] = json.loads(entry.read_text(encoding="utf-8"))

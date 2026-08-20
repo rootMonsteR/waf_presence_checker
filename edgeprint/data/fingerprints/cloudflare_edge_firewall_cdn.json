@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "license": "Apache-2.0",
   "vendor": "Cloudflare (edge firewall/CDN)",
   "layers": [
     "cdn"
@@ -35,14 +37,14 @@
       "layer": "waf",
       "weight": 0.25,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "cookie",
       "name_prefix": "__cfduid",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "cookie",
@@ -56,35 +58,35 @@
       "name_prefix": "cf_clearance",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "cookie",
       "name_prefix": "cf_ob_info",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "cookie",
       "name_prefix": "cf_use_ob",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "body",
       "contains": "attention required",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     },
     {
       "type": "body",
       "contains": "checking your browser",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/cloudflare_200.txt"
+      "verified_against": "tests/fixtures/positive/cloudflare_challenge_403.txt"
     }
   ]
 }

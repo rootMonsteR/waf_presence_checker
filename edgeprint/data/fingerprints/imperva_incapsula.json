@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "license": "Apache-2.0",
   "vendor": "Imperva/Incapsula",
   "layers": [
     "waf"
@@ -41,21 +43,21 @@
       "name_prefix": "nlbi_",
       "weight": 0.2,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/imperva_200.txt"
+      "verified_against": "tests/fixtures/positive/imperva_blocked_403.txt"
     },
     {
       "type": "body",
       "contains": "incapsula",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/imperva_200.txt"
+      "verified_against": "tests/fixtures/positive/imperva_blocked_403.txt"
     },
     {
       "type": "body",
       "contains": "powered by imperva",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/imperva_200.txt"
+      "verified_against": "tests/fixtures/positive/imperva_blocked_403.txt"
     }
   ]
 }

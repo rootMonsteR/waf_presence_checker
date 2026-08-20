@@ -53,7 +53,7 @@ Indicators:
 | WAF | Imperva/Incapsula · Sucuri · ModSecurity · F5 BIG-IP ASM · AWS WAF |
 | Bot management | Akamai Bot Manager |
 
-Every fingerprint is backed by a capture in [`tests/fixtures/`](tests/fixtures/) and asserted in CI. Coverage is deliberately narrow and verified rather than broad and untested — that ratio is the point, and it will change as the fingerprint database lands.
+Every signal names a capture in [`tests/fixtures/`](tests/fixtures/), and the test suite **replays it** against that capture — a signal that does not actually match the response it cites fails the build. Coverage is deliberately narrow and verified rather than broad and untested; that ratio is the point, and it will change as the database grows.
 
 ## How it works
 
@@ -85,7 +85,7 @@ Fingerprints live in [`edgeprint/data/fingerprints/`](edgeprint/data/fingerprint
 
 No build step and no compiled artifact: the files are read directly at import, so what you review is what ships. JSON rather than YAML keeps the runtime at **zero dependencies**, and a `notes` field carries what comments would have. The format is language-neutral by design — other tools can consume the database without depending on this package.
 
-Validation runs as part of the test suite rather than a separate build command, so `pytest` alone rejects the mistakes past bugs came from: generic block phrases used as vendor signals, cookie prefixes short enough to match opaque session values, and any signal without an existing fixture. See [`docs/FINGERPRINT_SCHEMA.md`](docs/FINGERPRINT_SCHEMA.md).
+Validation runs as part of the test suite rather than a separate build command, so `pytest` alone rejects the mistakes past bugs came from: generic block phrases used as vendor signals, cookie prefixes short enough to match opaque session values, and signals that do not match the capture they cite. See [`docs/FINGERPRINT_SCHEMA.md`](docs/FINGERPRINT_SCHEMA.md).
 
 ```bash
 ./check.sh   # tests, types, lint, format — everything CI would run
@@ -99,7 +99,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Attribution and licensing
 
-Engine: MIT (see [LICENSE](LICENSE)). Fingerprint database (`edgeprint/fingerprints.py`): Apache-2.0 (see [LICENSE-APACHE](LICENSE-APACHE)), because it aggregates BSD-3-Clause, MIT and Apache-2.0 material and Apache-2.0 is the only one of the three that absorbs the others coherently.
+Engine: MIT (see [LICENSE](LICENSE)). Fingerprint database (`edgeprint/data/fingerprints/`): Apache-2.0 (see [LICENSE-APACHE](LICENSE-APACHE)), because it aggregates BSD-3-Clause, MIT and Apache-2.0 material and Apache-2.0 is the only one of the three that absorbs the others coherently.
 
 Upstream projects and their attribution requirements are recorded in [NOTICE](NOTICE), including two deliberate exclusions: **WhatWaf** (GPL — cannot be relicensed into this compilation) and **JA4S** (FoxIO License 1.1 — not permissive for monetization).
 

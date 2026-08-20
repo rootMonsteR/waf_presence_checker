@@ -1,4 +1,6 @@
 {
+  "schema_version": 1,
+  "license": "Apache-2.0",
   "vendor": "Fastly",
   "layers": [
     "cdn"
@@ -34,7 +36,7 @@
       "contains": "fastly error",
       "weight": 0.15,
       "source": "edgeprint",
-      "verified_against": "tests/fixtures/positive/fastly_200.txt"
+      "verified_against": "tests/fixtures/positive/fastly_error_503.txt"
     }
   ]
 }
