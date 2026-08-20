@@ -1,0 +1,10 @@
+HTTP/1.1 403 Forbidden
+Server: cloudflare
+CF-RAY: 8b2f1e4c9a7d3f21-LHR
+cf-mitigated: challenge
+Set-Cookie: __cfduid=d1a2b3c4e5; path=/; HttpOnly
+Set-Cookie: cf_clearance=Zz9Yy8Xx7; path=/; Secure
+Set-Cookie: cf_ob_info=403:8b2f1e4c9a7d3f21:LHR; path=/
+Set-Cookie: cf_use_ob=443; path=/
+
+<html><head><title>Attention Required! | Cloudflare</title></head><body>Checking your browser before accessing example.com.</body></html>

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "license": "Apache-2.0",
+  "vendor": "AWS WAF",
+  "layers": [
+    "waf"
+  ],
+  "references": [
+    "https://docs.aws.amazon.com/waf/latest/developerguide/waf-tokens.html"
+  ],
+  "signals": [
+    {
+      "type": "header",
+      "key": "x-amzn-waf*",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/awswaf_403.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "aws-waf-token",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/awswaf_403.txt"
+    }
+  ]
+}

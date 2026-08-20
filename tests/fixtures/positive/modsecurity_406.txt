@@ -1,0 +1,6 @@
+HTTP/1.1 406 Not Acceptable
+Server: Apache
+X-Modsecurity-Action: blocked
+X-Powered-By: mod_security/2.9.7
+
+<html><body>An appropriate representation could not be found. Blocked by ModSecurity.</body></html>

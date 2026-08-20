@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "license": "Apache-2.0",
+  "vendor": "Akamai (edge)",
+  "layers": [
+    "cdn"
+  ],
+  "references": [
+    "https://techdocs.akamai.com/property-mgr/docs/know-caching"
+  ],
+  "signals": [
+    {
+      "type": "header",
+      "key": "server",
+      "contains": "akamai",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_200.txt"
+    },
+    {
+      "type": "header",
+      "key": "x-akamai*",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_200.txt"
+    },
+    {
+      "type": "header",
+      "key": "akamai-grn",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "header",
+      "key": "x-check-cacheable",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_200.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "ak_bmsc",
+      "layer": "bot",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_200.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "bm_sv",
+      "layer": "bot",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "bm_mi",
+      "layer": "bot",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "akaalb_",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "aka_a2",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "_abck",
+      "layer": "bot",
+      "weight": 0.2,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    },
+    {
+      "type": "body",
+      "contains": "akamai",
+      "weight": 0.15,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/akamai_blocked_403.txt"
+    }
+  ]
+}

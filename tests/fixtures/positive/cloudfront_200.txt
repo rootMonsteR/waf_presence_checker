@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+Server: CloudFront
+Via: 1.1 a1b2c3d4e5f6.cloudfront.net (CloudFront)
+X-Amz-Cf-Id: AbCdEfGhIjKlMnOpQrStUvWxYz
+X-Amz-Cf-Pop: LHR50-C1
+
+<html><body>hello</body></html>

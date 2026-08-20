@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+Server: Varnish
+X-Served-By: cache-lhr1234-LHR
+X-Fastly-Request-ID: 0123456789abcdef
+Fastly-Restarts: 1
+
+<html><body>hello</body></html>

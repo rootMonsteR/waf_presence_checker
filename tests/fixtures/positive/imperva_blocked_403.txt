@@ -1,0 +1,7 @@
+HTTP/1.1 403 Forbidden
+X-Iinfo: 12-34567890-34567891 NNNN CT(1 1 0)
+X-CDN: Incapsula
+Set-Cookie: nlbi_123456=AbCdEf; path=/
+Set-Cookie: incap_ses_123_456=XyZ123; path=/
+
+<html><body>Request unsuccessful. Incapsula incident ID: 123-456-789. Powered by Imperva.</body></html>

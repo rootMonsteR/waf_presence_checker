@@ -1,4 +1,4 @@
-"""Command-line interface for WAF Presence Checker.
+"""Command-line interface for edgeprint.
 
 This module provides the main CLI entry point for analyzing HTTP observations
 to detect potential WAF presence.
@@ -18,13 +18,14 @@ from .reporters import to_json, to_text
 EXIT_OK = 0
 EXIT_INDETERMINATE = 1
 EXIT_WAF_LIKELY = 2
+EXIT_EDGE_ONLY = 3
 
 # Configure logging
 logging.basicConfig(
-    level=logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 def _auto_fmt(path: str) -> str:
     """Auto-detect file format based on extension.
@@ -36,11 +37,11 @@ def _auto_fmt(path: str) -> str:
         Format string: 'har', 'json', or 'raw'
     """
     p = path.lower()
-    if p.endswith('.har'):
-        return 'har'
-    if p.endswith('.json'):
-        return 'json'
-    return 'raw'
+    if p.endswith(".har"):
+        return "har"
+    if p.endswith(".json"):
+        return "json"
+    return "raw"
 
 
 def main(argv: Optional[list] = None) -> int:
@@ -53,22 +54,29 @@ def main(argv: Optional[list] = None) -> int:
         Exit code: EXIT_OK (0), EXIT_INDETERMINATE (1), or EXIT_WAF_LIKELY (2)
     """
     ap = argparse.ArgumentParser(
-        description="Offline WAF presence checker (no network calls).",
-        epilog="Exit codes: 0=no WAF detected, 1=indeterminate/error, 2=WAF likely present"
+        description="edgeprint - offline WAF/CDN edge fingerprinting (no network calls).",
+        epilog=(
+            "Exit codes: 0=nothing detected, 1=nothing analyzable, "
+            "2=WAF likely present, 3=edge/CDN present but no WAF evidence"
+        ),
     )
     sub = ap.add_subparsers(dest="cmd")
 
     an = sub.add_parser("analyze", help="Analyze a captured response file.")
     an.add_argument("-i", "--input", required=True, help="Path to header/observation file")
-    an.add_argument("--format", choices=["auto", "raw", "json", "har"], default="auto",
-                    help="Input format (auto-detected by default)")
+    an.add_argument(
+        "--format",
+        choices=["auto", "raw", "json", "har"],
+        default="auto",
+        help="Input format (auto-detected by default)",
+    )
     an.add_argument("--json", action="store_true", help="Emit JSON instead of text")
     an.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
 
     args = ap.parse_args(argv)
 
     # Configure logging level
-    if hasattr(args, 'verbose') and args.verbose:
+    if hasattr(args, "verbose") and args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Verbose logging enabled")
 
@@ -90,18 +98,18 @@ def main(argv: Optional[list] = None) -> int:
             return EXIT_INDETERMINATE
 
         logger.info(f"Reading file: {args.input}")
-        text = path.read_text(encoding='utf-8', errors='ignore')
+        text = path.read_text(encoding="utf-8", errors="ignore")
 
         # Determine format
-        fmt = args.format if args.format != 'auto' else _auto_fmt(args.input)
+        fmt = args.format if args.format != "auto" else _auto_fmt(args.input)
         logger.info(f"Using format: {fmt}")
 
         # Parse input
-        if fmt == 'raw':
+        if fmt == "raw":
             ob = parse_raw_headers(text)
-        elif fmt == 'json':
+        elif fmt == "json":
             ob = parse_json_obs(text)
-        elif fmt == 'har':
+        elif fmt == "har":
             ob = parse_har(text)
         else:
             logger.error(f"Unknown format: {fmt}")
@@ -118,15 +126,20 @@ def main(argv: Optional[list] = None) -> int:
         else:
             print(to_text(report))
 
-        # Determine exit code
-        if report.likely_waf and report.confidence >= 0.6:
+        # A confident negative (headers parsed, nothing found) is EXIT_OK; only
+        # an unusable observation is indeterminate. Edge presence without WAF
+        # evidence gets its own code, because a CDN is not a WAF.
+        if report.likely_waf:
             logger.info(f"WAF detected with confidence {report.confidence}")
             return EXIT_WAF_LIKELY
-        if report.confidence == 0.0:
-            logger.info("No indicators found")
+        if report.likely_edge:
+            logger.info(f"Edge product detected, no WAF evidence: {report.layers}")
+            return EXIT_EDGE_ONLY
+        if not ob.headers:
+            logger.info("No headers to analyze; result is indeterminate")
             return EXIT_INDETERMINATE
 
-        logger.info(f"Low confidence ({report.confidence}), no WAF detected")
+        logger.info(f"Low confidence ({report.confidence}), nothing detected")
         return EXIT_OK
 
     except ValueError as e:

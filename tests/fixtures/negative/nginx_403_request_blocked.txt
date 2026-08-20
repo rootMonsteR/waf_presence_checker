@@ -1,0 +1,5 @@
+HTTP/1.1 403 Forbidden
+Server: nginx/1.24.0
+Content-Type: text/html
+
+<html><head><title>403 Forbidden</title></head><body><h1>Request Blocked</h1><p>Access denied.</p></body></html>

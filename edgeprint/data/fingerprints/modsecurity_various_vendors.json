@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "license": "Apache-2.0",
+  "vendor": "ModSecurity (various vendors)",
+  "layers": [
+    "waf"
+  ],
+  "references": [
+    "https://github.com/owasp-modsecurity/ModSecurity"
+  ],
+  "signals": [
+    {
+      "type": "header",
+      "key": "x-modsecurity*",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
+    },
+    {
+      "type": "header",
+      "key": "x-powered-by",
+      "contains": "mod_security",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
+    },
+    {
+      "type": "header",
+      "key": "server",
+      "contains": "mod_security",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/modsecurity_403.txt"
+    },
+    {
+      "type": "body",
+      "contains": "mod_security",
+      "weight": 0.15,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/modsecurity_403.txt"
+    },
+    {
+      "type": "body",
+      "contains": "modsecurity",
+      "weight": 0.15,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/modsecurity_406.txt"
+    }
+  ]
+}

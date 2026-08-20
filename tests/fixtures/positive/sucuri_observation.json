@@ -1,0 +1,11 @@
+{
+  "url": "https://example.com/",
+  "method": "GET",
+  "status_code": 403,
+  "headers": {
+    "Server": "Sucuri/Cloudproxy",
+    "X-Sucuri-ID": "12345",
+    "X-Sucuri-Cache": "MISS"
+  },
+  "body_excerpt": "<html><body>Access Denied - Sucuri Website Firewall</body></html>"
+}

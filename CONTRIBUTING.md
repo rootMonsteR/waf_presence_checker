@@ -1,6 +1,6 @@
-# Contributing to WAF Presence Checker
+# Contributing to edgeprint
 
-Thank you for your interest in contributing to the WAF Presence Checker project! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to the edgeprint project! This document provides guidelines and instructions for contributing.
 
 ## Table of Contents
 
@@ -64,8 +64,8 @@ Documentation improvements are always appreciated:
 
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/waf-presence-checker.git
-   cd waf-presence-checker
+   git clone https://github.com/YOUR_USERNAME/waf_presence_checker.git
+   cd waf_presence_checker
    ```
 
 3. **Create a virtual environment:**
@@ -96,15 +96,15 @@ Documentation improvements are always appreciated:
 
 **Format your code:**
 ```bash
-black waf_presence_checker/
-ruff check waf_presence_checker/ --fix
+black edgeprint/
+ruff check edgeprint/ --fix
 ```
 
 ### Type Checking
 
 Run mypy to ensure type correctness:
 ```bash
-mypy waf_presence_checker/
+mypy edgeprint/
 ```
 
 ### Documentation
@@ -154,19 +154,72 @@ When adding new WAF fingerprints, follow these guidelines:
 
 ### Fingerprint Structure
 
-Add fingerprints to `waf_presence_checker/fingerprints.py`:
+Add fingerprints to `edgeprint/data/fingerprints/<vendor>.json`. There is no build
+step — the files are read directly, so what you edit is what ships.
 
-```python
+```json
 {
-    "vendor": "VendorName WAF",
-    "header_contains": [
-        ("header-name", "value-substring"),  # Check if header contains value
-        ("x-vendor-id", ""),  # Check if header exists (empty string)
-    ],
-    "cookie_contains": ["vendor_cookie_prefix", "vendor_session"],
-    "body_contains": ["vendor signature", "unique error message"]
+  "vendor": "VendorName WAF",
+  "layers": ["waf"],
+  "references": ["https://vendor.example/docs/response-headers"],
+  "signals": [
+    {
+      "type": "header",
+      "key": "x-vendor*",
+      "contains": "",
+      "weight": 0.25,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/vendor_200.txt"
+    },
+    {
+      "type": "cookie",
+      "name_prefix": "vendor_session",
+      "weight": 0.20,
+      "source": "edgeprint",
+      "verified_against": "tests/fixtures/positive/vendor_200.txt"
+    }
+  ]
 }
 ```
+
+Use a `*` suffix whenever the real header name carries a suffix. Exact-key matching
+is the single most common source of missed detections.
+
+### Every fingerprint needs a fixture
+
+**A fingerprint without a captured response will not be merged.** This is the rule
+that keeps the database honest — the previous fingerprint set contained signals that
+had never matched a real response, including an Akamai entry that could not fire at all.
+
+1. Save the response to `tests/fixtures/positive/<vendor>_<status>.txt`
+2. Add a row to `tests/fixtures/manifest.json`:
+
+   ```json
+   {
+     "file": "positive/vendor_200.txt",
+     "format": "raw",
+     "label_source": "synthetic",
+     "expect_layers": ["waf"],
+     "expect_vendor": "VendorName WAF",
+     "expect_exit": 2
+   }
+   ```
+
+3. Run `./check.sh` — the suite is generated from the manifest and validates every
+   fingerprint, so your case is picked up automatically. No test code to write.
+
+All of `expect_layers` and `expect_exit` are required — the suite reads them at
+import time, so a row missing either aborts collection of the whole module.
+`expect_exit` is 2 when a `waf` layer is expected, 3 for edge without WAF, 0 for
+negatives.
+
+Set `label_source` honestly: `synthetic` for hand-built from documentation, `lab` for
+a WAF you stood up yourself, `cname` or `cidr` for a live host labelled by DNS or
+published IP range. Lab and infrastructure labels are worth far more than synthetic
+ones, because they are known rather than inferred.
+
+If your fingerprint could plausibly fire on an unprotected origin, add a matching
+negative fixture under `tests/fixtures/negative/` too.
 
 ### Testing Fingerprints
 
@@ -174,13 +227,12 @@ Before submitting:
 
 1. **Test with real samples:**
    ```bash
-   wafpc analyze -i test_sample.txt --verbose
+   edgeprint analyze -i test_sample.txt --verbose
    ```
 
 2. **Verify detection:**
-   - Ensure the fingerprint correctly identifies the WAF
-   - Check that confidence scores are reasonable
-   - Test that it doesn't trigger on unrelated responses
+   - The fingerprint identifies the WAF and ranks it first
+   - It does not fire on the negative fixtures: `pytest -k negative`
 
 3. **Document your testing:**
    - Include test methodology in PR description

@@ -1,0 +1,6 @@
+HTTP/1.1 503 Service Unavailable
+Server: Varnish
+X-Served-By: cache-lhr1234-LHR
+Fastly-Restarts: 1
+
+<html><body>Fastly error: unknown domain example.com</body></html>

@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Date: Mon, 19 Aug 2026 12:00:00 GMT
+Content-Type: text/html
+Server: AkamaiGHost
+X-Akamai-Transformed: 9 - 0 pmb=mRUM
+X-Check-Cacheable: NO
+Set-Cookie: ak_bmsc=A1B2C3D4E5; path=/; domain=.example.com
+
+<html><body>hello</body></html>

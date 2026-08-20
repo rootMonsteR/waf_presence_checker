@@ -1,0 +1,43 @@
+edgeprint
+Copyright (c) 2025-2026 edgeprint contributors
+
+This product includes software developed by the edgeprint contributors.
+The engine is licensed under the MIT License (see LICENSE).
+
+--------------------------------------------------------------------------
+Fingerprint database
+--------------------------------------------------------------------------
+
+The fingerprint database is licensed Apache-2.0 rather than MIT, because it is
+a compilation that aggregates material under BSD-3-Clause, MIT and Apache-2.0
+terms. Apache-2.0 absorbs all three coherently; MIT cannot relabel Apache-2.0
+material.
+
+Signals currently shipped were written from publicly documented vendor response
+patterns and are not derived from another project's source.
+
+Upstream databases approved for systematic import, with the attribution each
+requires. Every imported entry records its origin in a per-entry `source` field.
+
+  WAFW00F - https://github.com/EnableSecurity/wafw00f
+    Copyright (c) 2009-2026 WAFW00F Developers. BSD-3-Clause.
+
+  identYwaf - https://github.com/stamparm/identYwaf              MIT
+  cdncheck - https://github.com/projectdiscovery/cdncheck        MIT
+  wafme0w - https://github.com/Lu1sDV/wafme0w                    MIT
+  nuclei-templates - https://github.com/projectdiscovery/nuclei-templates
+                                                                 MIT
+  Awesome-WAF - https://github.com/0xInfection/Awesome-WAF        Apache-2.0
+  Vxscan - https://github.com/al0ne/Vxscan                        Apache-2.0
+
+EXCLUDED - do not import:
+
+  WhatWaf - https://github.com/Ekultek/WhatWaf                    GPL
+    Copyleft; cannot be relicensed into this compilation. Individual header
+    names are uncopyrightable facts, but a curated compilation of them is
+    protected. Where WhatWaf covers a vendor no permissive source does, treat
+    that vendor as a research target and derive signals independently.
+
+  JA4+ (JA4S and related) - https://github.com/FoxIO-LLC/ja4
+    FoxIO License 1.1. JA4 (client) is BSD-3-Clause, but JA4S - the server-side
+    fingerprint relevant here - is not permissive for monetization. Deferred.

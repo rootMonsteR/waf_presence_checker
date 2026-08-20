@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+X-Iinfo: 12-34567890-34567891 NNNN CT(1 1 0) RT(1755000000 123)
+X-CDN: Incapsula
+Set-Cookie: incap_ses_123_456=AbCdEf; path=/
+Set-Cookie: visid_incap_456=XyZ123; path=/
+
+<html><body>hello</body></html>
